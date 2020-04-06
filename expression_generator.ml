@@ -215,18 +215,51 @@ module ExpressionGenerator = struct
       | operators -> oneofl operators >>= function operator -> match operator with
         | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator)))
         | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator)) (type_of operator)]
+  
+  and conditional_gen goal_type scope fuel =
+    [expression_gen Boolean scope (fuel / 2) >>= function
+      | None -> return None
+      | Some predicate -> expression_gen goal_type scope (fuel / 2) >>= function
+        | None -> return None
+        | Some left_exp -> expression_gen goal_type scope (fuel / 2) >>= function
+          | None -> return None
+          | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, right_exp)))]
 
   and expression_gen goal_type scope fuel =
-    if fuel = 0 then
-      frequency (List.concat [
+    let generators = if fuel = 0 then
+      List.concat [
         List.map (fun g -> (1, g)) (literal_gen goal_type);
         List.map (fun g -> (1, g)) (variable_gen goal_type scope)
-      ])
+      ]
     else
-      frequency (List.concat [
+      List.concat [
         List.map (fun g -> (1, g)) (literal_gen goal_type);
         List.map (fun g -> (1, g)) (variable_gen goal_type scope);
-        List.map (fun g -> (20, g)) (indir_gen goal_type scope fuel)
-      ])
+        List.map (fun g -> (10, g)) (indir_gen goal_type scope fuel);
+        List.map (fun g -> (6, g)) (conditional_gen goal_type scope fuel)
+      ] in
+    
+    match generators with
+      | [] -> return None
+      | generators -> frequency generators >>= function
+        | None -> expression_gen goal_type scope fuel
+        | Some value -> return (Some value)
+
+  let rec string_of_boxed_literal = function
+    | BoxedInteger i -> string_of_int i
+    | BoxedFloat f -> string_of_float f
+    | BoxedBoolean b -> string_of_bool b
+    | BoxedString s -> "\"" ^ s ^ "\""
+
+  let rec string_of_tree_node = function
+    | Literal l -> string_of_boxed_literal l
+    | Variable s -> s
+    | OperatorApplication(a, Variable s) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+    | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
+    | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
+  
+  let serialize = function
+    | None -> "None"
+    | Some ast -> string_of_tree_node ast
 
 end
