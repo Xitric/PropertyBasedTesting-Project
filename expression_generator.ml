@@ -23,11 +23,77 @@ module ExpressionGenerator = struct
     | ConditionalApplication of tree_node * tree_node * tree_node
   
   let global_scope = [
+    (* Addition *)
+    ("+", Function(Float, Function(Float, Float)));
     ("+", Function(Integer, Function(Integer, Integer)));
+
+    (* String concatenation *)
+    ("+", Function(String, Function(String, String)));
+    ("+", Function(String, Function(Float, String)));
+    ("+", Function(Float, Function(String, String)));
+    ("+", Function(String, Function(Integer, String)));
+    ("+", Function(Integer, Function(String, String)));
+    ("+", Function(String, Function(Boolean, String)));
+    ("+", Function(Boolean, Function(String, String)));
+
+    (* Subtraction *)
+    ("-", Function(Float, Function(Float, Float)));
     ("-", Function(Integer, Function(Integer, Integer)));
+
+    (* Multiplication *)
+    ("*", Function(Float, Function(Float, Float)));
     ("*", Function(Integer, Function(Integer, Integer)));
+
+    (* String repetition *)
+    ("*", Function(String, Function(Integer, String)));
+    ("*", Function(Integer, Function(String, String)));
+
+    (* Division always returns a float *)
+    ("/", Function(Float, Function(Float, Float)));
+    ("/", Function(Integer, Function(Integer, Float)));
+
+    (* Exponentiation always returns a float *)
+    ("**", Function(Float, Function(Float, Float)));
+    ("**", Function(Integer, Function(Integer, Float)));
+
+    (* Unary negation *)
+    (* Not needed when the generators support negative number literals *)
+    (* ("-", Function(Float, Float)); *)
+    (* ("-", Function(Integer, Integer)); *)
+
+    (* Boolean operators *)
+    ("&&", Function(Boolean, Function(Boolean, Boolean)));
+    ("||", Function(Boolean, Function(Boolean, Boolean)));
+    ("!", Function(Boolean, Boolean));
+
+    (* Boolean comparisons *)
+    ("==", Function(Float, Function(Float, Boolean)));
+    ("==", Function(Integer, Function(Integer, Boolean)));
+    ("==", Function(Boolean, Function(Boolean, Boolean)));
+    ("==", Function(String, Function(String, Boolean)));
+
+    ("!=", Function(Float, Function(Float, Boolean)));
+    ("!=", Function(Integer, Function(Integer, Boolean)));
+    ("!=", Function(Boolean, Function(Boolean, Boolean)));
+    ("!=", Function(String, Function(String, Boolean)));
+
+    ("<", Function(Float, Function(Float, Boolean)));
+    ("<", Function(Integer, Function(Integer, Boolean)));
+    ("<", Function(String, Function(String, Boolean)));
+    ("<=", Function(Float, Function(Float, Boolean)));
+    ("<=", Function(Integer, Function(Integer, Boolean)));
+    ("<=", Function(String, Function(String, Boolean)));
+
+    (">", Function(Float, Function(Float, Boolean)));
+    (">", Function(Integer, Function(Integer, Boolean)));
+    (">", Function(String, Function(String, Boolean)));
+    (">=", Function(Float, Function(Float, Boolean)));
+    (">=", Function(Integer, Function(Integer, Boolean)));
+    (">=", Function(String, Function(String, Boolean)));
+
+    (* Variables, hardcoded for now *)
     ("a", Integer);
-    ("b", Integer)
+    ("b", Integer);
   ]
 
   (* option QCheck.Gen.t list *)
@@ -94,7 +160,7 @@ module ExpressionGenerator = struct
   ] *)
   (* Function(Integer, Function(String, Integer)) *)
   (* Function(Integer, Function(Integer, String)) *)  
-  let indir_gen goal_type scope fuel =
+  let rec indir_gen goal_type scope fuel =
     (* Step 0.5: Determine if a given type can be resolved to the goal type *)
 
     (* Goal: Function(Integer, Integer) *)
@@ -109,28 +175,58 @@ module ExpressionGenerator = struct
     let operators = List.filter (fun variable -> match variable with
       | (_, Function _) -> resolves_to_goal (type_of variable)
       | _ -> false) scope in
+    (* [
+      ("+", Function(Integer, Function(Integer, Integer))),
+      ("-", Function(Integer, Integer)),
+      ...
+    ] *)
 
     (* Step 2: Generate as many arguments as necessary to resolve the chosen generator to the goal type *)
-    (* Goal: Function(Integer, Function(Integer, Integer)) *)
-    (* Operator: Function(Integer, Function(Integer, Integer)) *)
-    (* Result: Some(Variable("+")) *)
+    
+    (* Goal:      Function(Integer, Function(Integer, Integer)) *)
+    (* Operator:  Function(Integer, Function(Integer, Integer)) *)
+    (* Result:    Some(Variable("+")) *)
+    let open Gen in
 
-    (* Goal: Function(Integer, Integer) *)
-    (* Operator: Function(Integer, Function(Integer, Integer)) *)
-    (* Result: Some(OperatorApplication(2, Variable("+"))) *)
+    
+    (* type tree_node =
+    | Literal of boxed_literal
+    | Variable of string
+    | OperatorApplication of tree_node * tree_node
+    | ConditionalApplication of tree_node * tree_node * tree_node *)
 
-    (* Goal: Integer *)
     (* Operator: Function(Integer, Function(Integer, Integer)) *)
-    (* Result: Some(OperatorApplication(8, OperatorApplication(2, Variable("+")))) *)
+    (* Base case: Variable("+") *)
+    (* Step 1: previous=Variable("+") function_type=Function(Integer, Function(Integer, Integer)) *)
+    (*    OperatorApplication(5, Variable("+")) *)
+    (* Step 2: previous=OperatorApplication(5, Variable("+")) function_type=Function(Integer, Integer) *)
+    (*    OperatorApplication(8, OperatorApplication(5, Variable("+"))) *)
+    (* Done, function_type = Integer = goal_type *)
+    let rec resolve_arguments_to_goal_inner previous function_type = match function_type with 
+      | _ when function_type = goal_type -> return (Some previous)
+      | Function(a,return_type) -> (expression_gen a scope (fuel/2) >>= function arg -> match arg with
+        | Some a -> resolve_arguments_to_goal_inner (OperatorApplication(a, previous)) return_type
+        | None -> return None)
+      | _ -> return None in
 
     (* Step 3: Ensure that we do not get errors with empty lists, and return the result *)
+    [match operators with
+      | [] -> return None
+      | operators -> oneofl operators >>= function operator -> match operator with
+        | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator)))
+        | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator)) (type_of operator)]
 
-
-  let expression_gen goal_type scope fuel =
-    oneof (List.concat [
-      literal_gen goal_type;
-      variable_gen goal_type scope;
-      (* indir_gen goal_type scope fuel *)
-    ])
+  and expression_gen goal_type scope fuel =
+    if fuel = 0 then
+      frequency (List.concat [
+        List.map (fun g -> (1, g)) (literal_gen goal_type);
+        List.map (fun g -> (1, g)) (variable_gen goal_type scope)
+      ])
+    else
+      frequency (List.concat [
+        List.map (fun g -> (1, g)) (literal_gen goal_type);
+        List.map (fun g -> (1, g)) (variable_gen goal_type scope);
+        List.map (fun g -> (20, g)) (indir_gen goal_type scope fuel)
+      ])
 
 end
