@@ -79,10 +79,6 @@ let global_scope = [
   (">", Function(Integer, Function(Integer, Boolean)));
   (">=", Function(Float, Function(Float, Boolean)));
   (">=", Function(Integer, Function(Integer, Boolean)));
-
-  (* Variables, hardcoded for now *)
-  ("a", Integer);
-  ("b", Integer);
 ]
 
 (* option QCheck.Gen.t list *)
@@ -247,6 +243,6 @@ let rec string_of_tree_node = function
   | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
   | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
 
-let serialize = function
+let serialize_exp = function
   | None -> "None"
   | Some ast -> string_of_tree_node ast
