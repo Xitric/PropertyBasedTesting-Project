@@ -241,7 +241,7 @@ let rec string_of_tree_node = function
   | Variable s -> s
   | OperatorApplication(a, Variable s) -> " " ^ s ^ " " ^ (string_of_tree_node a)
   | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
+  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")"
 
 let serialize_exp = function
   | None -> "None"
