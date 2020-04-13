@@ -1,0 +1,39 @@
+language python
+channel endpoint1
+channel inserial
+channel outserial
+
+board esp32 version wrover
+	in inserial
+	
+	//ExtSensor
+	sensor thermistor (12,13) as therm(a, b)
+		sample frequency 10
+		
+		data voltage
+			out endpoint1 therm.filter[5 > 100].byWindow[20].median.map[a + b -> c].map[c * 6 -> d].filter[d < 5 ? d > 0 : d == 10]
+			out outserial therm.map[5 -> c]
+			//out oled ...
+		
+		data debug
+			out outserial therm.map[a + " : " + b -> c]
+	
+	//OnbSensor
+	sensor thermometer as temp(a)
+		sample signal
+		
+		data temperature
+			out endpoint1 temp.map[false -> c]
+		
+		data debug
+			out outserial temp.map[1 + " : " + 0 -> c] 
+
+cloud
+	transformation temperature_max as tempMax(a)
+		data voltage_mean
+			out tempMax.filter[true].byWindow[10].mean
+
+fog
+	transformation temperature as x(a)
+		data temperature_max
+			out x.byWindow[10].max

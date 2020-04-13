@@ -1,6 +1,6 @@
 open QCheck
 open ExpressionGenerator
-
+ 
 (* type value_type =
   | Primitive of expression_type
   | Tuple of expression_type list *)
@@ -14,7 +14,7 @@ type execute_pipeline =
   | StDev
   | Min
   | Max
-  | Count
+  | Count 
 
 type pipeline_node =
   | Filter of tree_node * pipeline_node option
@@ -74,7 +74,7 @@ and map_gen variables fuel =
 and window_gen variables fuel = 
   if List.length variables > 1 then
     return None
-  else
+  else 
     (int_range 1 16) >>= fun number ->
       execute_gen >>= fun expip ->
         pipeline_gen variables (fuel/2) >>= fun next ->
@@ -90,7 +90,7 @@ and pipeline_gen variables fuel =
       (10, map_gen variables fuel);
       (1, window_gen variables fuel)
     ]
-
+ 
 let string_of_execute = function
   | Reduce -> "reduce"
   | Mean -> "mean"

@@ -1,0 +1,15 @@
+language python
+channel WOcNkand
+channel RFpeoV
+channel _gbzE
+channel AGGbsUphcHP
+board esp32 version wrover
+	in WOcNkand
+	sensor RA(1) as pWTs(RtLmWSSR)
+			sample signal
+			data lnc
+				out WOcNkand pWTs.map[true != false ? false ? -161756.997041 : -112989.231576 : RtLmWSSR ** RtLmWSSR == true ? true : true ? true ? -0.489856976366 : -172029.044818 : 3.70897482279 * -0.272281328458 -> weQYTqq].filter[-12 - 5 != weQYTqq ? 0 : 1 == weQYTqq].map[0 + 0 * -5 * 0 + weQYTqq ? "OW6Y^I" : "Cg9;rv2" + "v:L$j4_HJXhWO=^/=cA}:$x" + true -> FxfgSuhW]
+				out WOcNkand pWTs.map[false ? false : false ? false || true : true ? true : false ? false ? false : false ? 27.0816102948 > -332290.934563 : -0.219702933905 < -17301.6961266 :  ! true || false -> qYSVxX_d].map[false ? qYSVxX_d : qYSVxX_d ? 11294.0039644 + -72200.7514096 : -2.09284136294 - -3.72640380033e-05 + -95057.5157989 > -3.13663613597e-05 ? true ? "$Fv~|:T+c]@[:0%k:Yt1>Nw+@Ddovb" : ".,+6xv`/kYF g" : "kpfN;L$<*" + 1 -> XLQLon].map[true ? 5.10110952274e-06 : 51153.1914681 * 1 / 6 < -1811581.79534 / 4.88319314377 + 0.00954577754279 ** 156789.307161 -> wBTmt_qYjEpo]
+				out RFpeoV pWTs.map[RtLmWSSR + -3 - true ? 17 : 4611686018427387903 < 0 < RtLmWSSR ? 1 : false ? -4611686018427387904 : 3 -> OqRRA_].filter[-3 - 147253333332233397 ** 2 - 2760935475709202618 >= OqRRA_ ? OqRRA_ : true ? OqRRA_ ? -136.001949949 : -7.05268393557e-07 : 0.00083306672811 / 9.08160040105e-05].filter[OqRRA_]
+				out RFpeoV pWTs.map[true ? -0.000545279454862 : -0.010368183736 < 3145320104982704483 ** -1 ? true ? "" : "DyQ=i$XSRU" + RtLmWSSR <= RtLmWSSR : 0.00422716232175 + "PY*9}MT/~}." + RtLmWSSR - RtLmWSSR -> gjl_D].filter[ ! 2389439667571933770 / 83 != true ? 0.000125092280475 : 0.0785145458547].map[720966.041723 != 1.10996827416e-05 ? -4511528124944556397 : false ? 1650444164656811206 : 1 * -89 + -2 + 79 * "]}{Ib;*f@ZqIFnSkJCKzszUd" -> PidqwNmlCkN]
+
