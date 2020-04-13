@@ -1,9 +1,5 @@
 open QCheck
 open ExpressionGenerator
- 
-(* type value_type =
-  | Primitive of expression_type
-  | Tuple of expression_type list *)
 
 type execute_pipeline =
   | Reduce
@@ -18,15 +14,8 @@ type execute_pipeline =
 
 type pipeline_node =
   | Filter of tree_node * pipeline_node option
-  (* | Abs of tree_node *)
   | Map of tree_node * string * pipeline_node option
   | Window of int * execute_pipeline * pipeline_node option
-
-(* Scope for VarIDs *)
-let variables = [
-  (* E.g. *)
-  (* ("a", Integer) *)
-]
 
 open Gen
 (* Generator for variable identifiers *)

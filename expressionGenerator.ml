@@ -81,7 +81,6 @@ let global_scope = [
 
 let rec get_precedence = function
   | Literal _ -> 21
-  (* | Literal _ -> 0 *)
   | Variable(_, p) -> p
   | OperatorApplication(_, child) -> get_precedence child
   | ConditionalApplication _ -> 4
@@ -149,7 +148,7 @@ let rec indir_gen goal_type scope fuel =
       | None -> return None)
     | _ -> return None in
 
-  (* Step 3: Ensure that we do not get errors with empty lists, and return the result *)
+  (* Step 4: Ensure that we do not get errors with empty lists, and return the result *)
   [match operators with
     | [] -> return None
     | operators -> oneofl operators >>= function operator -> match operator with

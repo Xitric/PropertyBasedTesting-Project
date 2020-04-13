@@ -2,6 +2,7 @@ open QCheck
 open PipelineGenerator
 open ExpressionGenerator
 
+(* Types *)
 type data_node = 
     | Out of string * string * pipeline_node
 
@@ -28,18 +29,7 @@ type dsl =
 
 let environment = ([], [], [])
 
-(* let add_channel channel (channel_env, sensor_env, data_env) =
-    let new_channel_env = channel::channel_env in
-    (new_channel_env, sensor_env, data_env) *)
-    
-(* let add_sensor sensor (channel_env, sensor_env, data_env) =
-    let new_sensor_env = sensor::sensor_env in
-    (channel_env, new_sensor_env, data_env)
-
-let add_data data (channel_env, sensor_env, data_env) =
-    let new_data_env = data::data_env in
-    (channel_env, sensor_env, new_data_env) *)
-
+(* Generators *)
 open Gen
 let rec channel_gen environment =
     list_size (int_range 1 6) identifier_gen >>= fun result ->
@@ -75,7 +65,6 @@ let variables_gen length =
         list_repeat length identifier_gen >>= fun vars ->
             return (Variables(name, vars))
 
-(* type env_type = string list * string * (string * expression_type) list *)
 let add_vars vars (channel_env, source_name, variables) = match vars with
     Variables(name, ids) ->
         List.fold_left
@@ -93,7 +82,7 @@ let sensor_gen environment =
                         let new_environment = add_vars vars environment in
                         data_gen new_environment >>= fun datas ->
                             return (ExtSensor(name, pins, vars, [sampler;datas])) in
-    (* let onb_sensor_gen environment = 4 in *)
+    (* let onb_sensor_gen environment = ? in *)
     
     sample_gen >>= fun sampler ->
         oneof [
@@ -103,13 +92,6 @@ let sensor_gen environment =
 
 let in_gen (channel_env, _, _) =
     oneofl channel_env >>= fun channel -> return (In channel)
-
-(* type board_node =
-    | In of string
-    | ExtSensor of string * int list * variables * sensor_node list
-    | OnbSensor of string * variables * sensor_node list
- *)
-  
 
 let board_gen environment fuel =
     oneofl["esp32"; "ESP32"] >>= fun name ->
@@ -139,6 +121,7 @@ let root_gen environment fuel =
         board_gen new_environment fuel >>= fun board ->
             return (Dsl([Language "python"] @ channels @ [board]))
 
+(* Serializers *)
 let string_of_data_node = function
     | Out(channel, source, pipeline) -> "\t\t\t\tout " ^ channel ^ " " ^ source ^ (string_of_pipeline_node (Some pipeline) ^ "\n")
 
@@ -146,12 +129,10 @@ let string_of_sensor_node = function
     | FrequencySample freq -> "\t\t\tsample frequency " ^ (string_of_int freq) ^ "\n"
     | SignalSample -> "\t\t\tsample signal\n"
     | Data(name, outs) -> "\t\t\tdata " ^ name ^ "\n" ^
-        (* List.fold_left (fun acc out -> acc ^ (string_of_data_node out)) "" outs *)
         String.concat "" (List.map string_of_data_node outs)
 
 let string_of_variables = function
     | Variables(name, ids) -> " as " ^ name ^ "(" ^
-        (* List.fold_left (fun acc id -> id ^ ", ") "" ids *)
         String.concat ", " ids
     ^ ")"
 
@@ -171,7 +152,6 @@ let string_of_root_node = function
 
 let string_of_dsl = function
     | Dsl content -> String.concat "" (List.map string_of_root_node content)
-
 
 let generate =
     let ast = generate1 (root_gen environment 6) in
