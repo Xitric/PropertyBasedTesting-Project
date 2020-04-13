@@ -16,73 +16,80 @@ type boxed_literal =
 
 type tree_node =
   | Literal of boxed_literal
-  | Variable of string
+  | Variable of string * int
   | OperatorApplication of tree_node * tree_node
   | ConditionalApplication of tree_node * tree_node * tree_node
 
+(* The integer represents operator precedence, and is taken from *)
+(* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)
 let global_scope = [
   (* Addition *)
-  ("+", Function(Float, Function(Float, Float)));
-  ("+", Function(Integer, Function(Integer, Integer)));
+  ("+", Function(Float, Function(Float, Float)), 14);
+  ("+", Function(Integer, Function(Integer, Integer)), 14);
 
   (* String concatenation *)
-  ("+", Function(String, Function(String, String)));
-  ("+", Function(String, Function(Float, String)));
-  ("+", Function(Float, Function(String, String)));
-  ("+", Function(String, Function(Integer, String)));
-  ("+", Function(Integer, Function(String, String)));
-  ("+", Function(String, Function(Boolean, String)));
-  ("+", Function(Boolean, Function(String, String)));
+  ("+", Function(String, Function(String, String)), 14);
+  ("+", Function(String, Function(Float, String)), 14);
+  ("+", Function(Float, Function(String, String)), 14);
+  ("+", Function(String, Function(Integer, String)), 14);
+  ("+", Function(Integer, Function(String, String)), 14);
+  ("+", Function(String, Function(Boolean, String)), 14);
+  ("+", Function(Boolean, Function(String, String)), 14);
 
   (* Subtraction *)
-  ("-", Function(Float, Function(Float, Float)));
-  ("-", Function(Integer, Function(Integer, Integer)));
+  ("-", Function(Float, Function(Float, Float)), 14);
+  ("-", Function(Integer, Function(Integer, Integer)), 14);
 
   (* Multiplication *)
-  ("*", Function(Float, Function(Float, Float)));
-  ("*", Function(Integer, Function(Integer, Integer)));
+  ("*", Function(Float, Function(Float, Float)), 15);
+  ("*", Function(Integer, Function(Integer, Integer)), 15);
 
-  (* String repetition *)
-  ("*", Function(String, Function(Integer, String)));
-  ("*", Function(Integer, Function(String, String)));
+  (* String repetition - Not supported by DSL *)
+  (* ("*", Function(String, Function(Integer, String)), 15);
+  ("*", Function(Integer, Function(String, String)), 15); *)
 
   (* Division always returns a float *)
-  ("/", Function(Float, Function(Float, Float)));
-  ("/", Function(Integer, Function(Integer, Float)));
+  ("/", Function(Float, Function(Float, Float)), 15);
+  ("/", Function(Integer, Function(Integer, Float)), 15);
 
   (* Exponentiation always returns a float *)
-  ("**", Function(Float, Function(Float, Float)));
-  ("**", Function(Integer, Function(Integer, Float)));
+  ("**", Function(Float, Function(Float, Float)), 16);
+  ("**", Function(Integer, Function(Integer, Float)), 16);
 
   (* Boolean operators *)
-  ("&&", Function(Boolean, Function(Boolean, Boolean)));
-  ("||", Function(Boolean, Function(Boolean, Boolean)));
-  ("!", Function(Boolean, Boolean));
+  ("&&", Function(Boolean, Function(Boolean, Boolean)), 6);
+  ("||", Function(Boolean, Function(Boolean, Boolean)), 5);
+  ("!", Function(Boolean, Boolean), 17);
 
   (* Boolean comparisons *)
-  ("==", Function(Float, Function(Float, Boolean)));
-  ("==", Function(Integer, Function(Integer, Boolean)));
-  ("==", Function(Boolean, Function(Boolean, Boolean)));
-  ("==", Function(String, Function(String, Boolean)));
+  ("==", Function(Float, Function(Float, Boolean)), 11);
+  ("==", Function(Integer, Function(Integer, Boolean)), 11);
+  ("==", Function(Boolean, Function(Boolean, Boolean)), 11);
+  ("==", Function(String, Function(String, Boolean)), 11);
 
-  ("!=", Function(Float, Function(Float, Boolean)));
-  ("!=", Function(Integer, Function(Integer, Boolean)));
-  ("!=", Function(Boolean, Function(Boolean, Boolean)));
-  ("!=", Function(String, Function(String, Boolean)));
+  ("!=", Function(Float, Function(Float, Boolean)), 11);
+  ("!=", Function(Integer, Function(Integer, Boolean)), 11);
+  ("!=", Function(Boolean, Function(Boolean, Boolean)), 11);
+  ("!=", Function(String, Function(String, Boolean)), 11);
 
-  ("<", Function(Float, Function(Float, Boolean)));
-  ("<", Function(Integer, Function(Integer, Boolean)));
-  ("<=", Function(Float, Function(Float, Boolean)));
-  ("<=", Function(Integer, Function(Integer, Boolean)));
+  ("<", Function(Float, Function(Float, Boolean)), 12);
+  ("<", Function(Integer, Function(Integer, Boolean)), 12);
+  ("<=", Function(Float, Function(Float, Boolean)), 12);
+  ("<=", Function(Integer, Function(Integer, Boolean)), 12);
 
-  (">", Function(Float, Function(Float, Boolean)));
-  (">", Function(Integer, Function(Integer, Boolean)));
-  (">=", Function(Float, Function(Float, Boolean)));
-  (">=", Function(Integer, Function(Integer, Boolean)));
+  (">", Function(Float, Function(Float, Boolean)), 12);
+  (">", Function(Integer, Function(Integer, Boolean)), 12);
+  (">=", Function(Float, Function(Float, Boolean)), 12);
+  (">=", Function(Integer, Function(Integer, Boolean)), 12);
 ]
 
-(* option QCheck.Gen.t list *)
-(* Literals, operator applications (2+5, 7/3), variables (+, /, a, b, c), conditional operator applications, ... *)
+let rec get_precedence = function
+  | Literal _ -> 21
+  (* | Literal _ -> 0 *)
+  | Variable(_, p) -> p
+  | OperatorApplication(_, child) -> get_precedence child
+  | ConditionalApplication _ -> 4
+
 open Gen
 
 let int_gen = frequency [
@@ -115,82 +122,34 @@ let literal_gen literal_type = match literal_type with
   | String -> [map (fun s -> Some(Literal(BoxedString s))) (string_gen)]
   | _ -> [return None]
 
-(* variable_type: Integer, Function(Integer, Integer) *)
-(* scope: [
-  ("+", Function(Integer, Function(Integer, Integer)));
-  ("-", Function(Integer, Function(Integer, Integer)));
-  ("*", Function(Integer, Function(Integer, Integer)));
-  ("a", Integer);
-  ("b", Integer)
-] *)
-let type_of var = snd var
-let identifier_of var = fst var
-(* tree_node option QCheck.Gen.t list *)
+let identifier_of (i, _, _) = i
+let type_of (_, t, _) = t
+let precedence_of (_, _, p) = p
+
 let variable_gen variable_type scope = 
   (* Choose variables from scope that have the specified variable_type *)
-
-  (* ("a", Integer); *)
-  (* Variable("a") *)
   (* Return a generator choosing between the variables from above *)
   match List.filter (fun variable -> type_of variable = variable_type) scope with
     | [] -> [return None]
-    | variables -> [map (fun s -> Some(Variable (fst s))) (oneofl variables)]
+    | variables -> [map (fun s -> Some(Variable (identifier_of s, precedence_of s))) (oneofl variables)]
 
-(* scope: [
-  ("+", Function(Integer, Function(Integer, Integer)));
-  ("-", Function(Integer, Function(Integer, Integer)));
-  ("*", Function(Integer, Function(Integer, Integer)));
-  ("a", Integer);
-  ("b", String)
-] *)
-(* Function(Integer, Function(String, Integer)) *)
-(* Function(Integer, Function(Integer, String)) *)  
 let rec indir_gen goal_type scope fuel =
-  (* Step 0.5: Determine if a given type can be resolved to the goal type *)
-
-  (* Goal: Function(Integer, Integer) *)
-  (* Iter 1: t = Function(Integer, Function(Integer, Integer)) *)
-  (* Iter 2 (Base case): t = Function(Integer, Integer) *)
+  (* Step 1: Determine if a given type can be resolved to the goal type *)
   let rec resolves_to_goal t = match t with
     | _ when goal_type = t -> true
     | Function(a, b) -> resolves_to_goal b
     | _ -> false in
     
-  (* Step 1: Choose all operators that resolve to the goal type *)
+  (* Step 2: Choose all operators that resolve to the goal type *)
   let operators = List.filter (fun variable -> match variable with
-    | (_, Function _) -> resolves_to_goal (type_of variable)
+    | (_, Function _, _) -> resolves_to_goal (type_of variable)
     | _ -> false) scope in
-  (* [
-    ("+", Function(Integer, Function(Integer, Integer))),
-    ("-", Function(Integer, Integer)),
-    ...
-  ] *)
 
-  (* Step 2: Generate as many arguments as necessary to resolve the chosen generator to the goal type *)
-  
-  (* Goal:      Function(Integer, Function(Integer, Integer)) *)
-  (* Operator:  Function(Integer, Function(Integer, Integer)) *)
-  (* Result:    Some(Variable("+")) *)
-  let open Gen in
-
-  
-  (* type tree_node =
-  | Literal of boxed_literal
-  | Variable of string
-  | OperatorApplication of tree_node * tree_node
-  | ConditionalApplication of tree_node * tree_node * tree_node *)
-
-  (* Operator: Function(Integer, Function(Integer, Integer)) *)
-  (* Base case: Variable("+") *)
-  (* Step 1: previous=Variable("+") function_type=Function(Integer, Function(Integer, Integer)) *)
-  (*    OperatorApplication(5, Variable("+")) *)
-  (* Step 2: previous=OperatorApplication(5, Variable("+")) function_type=Function(Integer, Integer) *)
-  (*    OperatorApplication(8, OperatorApplication(5, Variable("+"))) *)
-  (* Done, function_type = Integer = goal_type *)
+  (* Step 3: Generate as many arguments as necessary to resolve the chosen generator to the goal type *)
   let rec resolve_arguments_to_goal_inner previous function_type = match function_type with 
     | _ when function_type = goal_type -> return (Some previous)
-    | Function(a,return_type) -> (expression_gen a scope (fuel/2) >>= function arg -> match arg with
-      | Some a -> resolve_arguments_to_goal_inner (OperatorApplication(a, previous)) return_type
+    | Function(a,return_type) -> (expression_gen a scope (fuel/2) >>= function
+      | Some arg -> resolve_arguments_to_goal_inner (OperatorApplication(arg, previous)) return_type
       | None -> return None)
     | _ -> return None in
 
@@ -198,8 +157,8 @@ let rec indir_gen goal_type scope fuel =
   [match operators with
     | [] -> return None
     | operators -> oneofl operators >>= function operator -> match operator with
-      | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator)))
-      | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator)) (type_of operator)]
+      | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator, precedence_of operator)))
+      | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator, precedence_of operator)) (type_of operator)]
 
 and conditional_gen goal_type scope fuel =
   [expression_gen Boolean scope (fuel / 2) >>= function
@@ -236,13 +195,75 @@ let rec string_of_boxed_literal = function
   | BoxedBoolean b -> string_of_bool b
   | BoxedString s -> "\"" ^ s ^ "\""
 
+(* let rec string_of_tree_node = function
+  | Literal l -> string_of_boxed_literal l
+  | Variable(s, _) -> s
+  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
+  | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication(_, Variable _) as r)) ->
+  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) -> *)
+    let left_precedence = get_precedence l in
+    let right_precedence = get_precedence r in
+    if left_precedence > right_precedence then
+      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
+    else if left_precedence < right_precedence then
+      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
+    else
+      (string_of_tree_node l) ^ (string_of_tree_node r)
+  | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
+  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")" *)
+
+let parenthesise exp = "(" ^ exp ^ ")"
+
 let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
-  | Variable s -> s
-  | OperatorApplication(a, Variable s) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+  | Variable(s, _) -> s
+  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
+  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication(_, Variable _) as r)) -> *)
+  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) -> *)
+  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication(r, Variable(_, op_prec)))) -> *)
+  | OperatorApplication(l, (OperatorApplication(r, Variable(s, op_prec)))) ->
+    let left_precedence = get_precedence l in
+    let right_precedence = get_precedence r in
+    if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l
+    ^
+    s
+    ^
+    if right_precedence < op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r
+
+
+    (* if left_precedence < op_prec then
+      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
+    else if left_precedence < right_precedence then
+      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
+    else
+      (string_of_tree_node l) ^ (string_of_tree_node r) *)
   | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")"
+  | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
+
+(* let rec broken_string_of_tree_node = function
+  | Literal l -> string_of_boxed_literal l
+  | Variable(s, _) -> s
+  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
+  | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) ->
+    let left_precedence = get_precedence l in
+    let right_precedence = get_precedence r in
+    if left_precedence > right_precedence then
+      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
+    else if left_precedence < right_precedence then
+      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
+    else
+      (string_of_tree_node l) ^ (string_of_tree_node r)
+  | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
+  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")" *)
 
 let serialize_exp = function
-  | None -> "None"
-  | Some ast -> string_of_tree_node ast
+  | None -> failwith "ERR"
+  (* | Some ast -> print_endline (string_of_tree_node ast ^ "\n" ^ broken_string_of_tree_node ast); ast *)
+  | Some ast -> print_endline (string_of_tree_node ast); ast
+
+
+(* (5+2) * 9 *)
+(* 2 * (9+5) *)

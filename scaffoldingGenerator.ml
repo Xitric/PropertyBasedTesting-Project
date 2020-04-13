@@ -178,34 +178,3 @@ let generate =
     let out = open_out "generated.iot" in
     Printf.fprintf out "%s\n" (string_of_dsl ast);
     close_out out
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

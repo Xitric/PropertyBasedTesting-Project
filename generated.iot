@@ -1,16 +1,13 @@
 language python
-channel hESKMZR
-channel EKw_liBGC
-channel _fbmlFNA_Qa
-channel __XVg
+channel TbWHcwtGm
+channel TH_sN_rNySIX
 board ESP32 version wrover
-	in __XVg
-	sensor ubV(0) as k(rrFaRc_XKdr)
-			sample frequency 7
-			data kEHC_qmRv
-				out EKw_liBGC k.filter[true].map[((true ? true : false) && (false ? false : false) ? ((true ? true : true) ? 4.3589759159e-06 == -0.00048541728056 : rrFaRc_XKdr >= 1) : (95193.7314417 > -9496.8192988 ? -101812.027044 < -0.441703109304 : 137.62909195 > 0.00268188525481)) -> gH_sysMtPXfS].filter[(gH_sysMtPXfS ? (gH_sysMtPXfS ? 4611686018427387903 > 93 : 3 != -955463434483523993) : (true ? -2.0342654804e-05 : 10.9600457655) > -7903.10612521 - 0.154761128177)]
-				out _fbmlFNA_Qa k.filter[(1 < rrFaRc_XKdr ? 1 ** rrFaRc_XKdr : (false ? -6154.98795299 : 0.0479261873152)) == ((false ? false : false) ? -0.021730549245 : -28764.8507515 + -4.870099889e-06)].filter[(true && false ? false || false : rrFaRc_XKdr >= 3389794606448275800) && ((true ? false : false) ? true == false : -353.302064039 > 1.87178585403)].byWindow[11].count
-				out _fbmlFNA_Qa k.map[4611686018427387903 + rrFaRc_XKdr * -7 * 7 * rrFaRc_XKdr + 36 * (false ? 4 : rrFaRc_XKdr) -> ncAppBk].filter[(true != ncAppBk == 51 ? (false ? false : true) && (true ? true : true) : (9040.20796824 < -0.000107834854493 ? (false ? false : true) : 0 <= ncAppBk))].byWindow[13].mode
-				out _fbmlFNA_Qa k.filter[(rrFaRc_XKdr <= 4611686018427387903 ? rrFaRc_XKdr ** 1 : -1.66131580989 ** 4.08181474582) < (-4 > 4 ? 517120.691175 + -0.0486532998913 : 2 ** 0)].map[6 + "lA!" + rrFaRc_XKdr - -33 * 1 * rrFaRc_XKdr - rrFaRc_XKdr - 6 -> UyJdk_fnw].map[-1.43004582937e-06 >= ("i4&;tsx7h;]a#D.EW5R(r VkD&']VJsd" == "Sl}Th}P;M^rhZf~^:[BB" ? (true ? -2.6173122253e-06 : -61257.3211185) : (true ? 50.0483103647 : -3.35760127108)) -> bauxqKNn]
-				out EKw_liBGC k.map["y2iVkK}MylheiBa" -> _ySQ].filter[-7 - 0 - (true ? 1 : 2) <= -22 + 2 - 4 * -4611686018427387904].filter[(0.0001015087109 > 3.10857532903e-06 ? -5 < -44 : (false ? false : false)) != (-0.78809551726 > 1056574.79282 ? true == true : (true ? true : false))]
-
+	in TH_sN_rNySIX
+	sensor xlYtUx(3, 6) as suibFE(HdLRabLfyI, Jkfmz)
+			sample signal
+			data KOfnweX
+				out TH_sN_rNySIX suibFE.map[HdLRabLfyI ** 3 * Jkfmz - -87 - 4611686018427387903 -> ORurtnoUXqUj].filter[((true ? true : false) ? 2 >= -1384362852221339542 : (true ? true : true)) && (true ? "l*]~ymZ" : "8E&Z:1*w01a") == "TC" + "N{ zN*JEQ04NCNT"].map[39 + -9 * true + "C&^zJcg*lBTY" * 3 + -4452627016870117370 * 2 * 28 -> NBygKbvXgwr]
+				out TbWHcwtGm suibFE.map[HdLRabLfyI + Jkfmz - (true ? 0 : HdLRabLfyI) ** (2.66652541663 < 0.000209626029816 ? (true ? HdLRabLfyI : Jkfmz) : (false ? HdLRabLfyI : -2)) -> PLlGhbeyaU].filter[(false ? false : false) || true == (true ? PLlGhbeyaU : PLlGhbeyaU) > (false ? 0.798731195491 : -0.141375374221)].map[(false ? PLlGhbeyaU : PLlGhbeyaU) ** PLlGhbeyaU * PLlGhbeyaU / ((true ? false : false) ? PLlGhbeyaU - 0.0107966419231 : (true ? PLlGhbeyaU : -7.20094363144e-07)) -> SpDMOx]
+				out TbWHcwtGm suibFE.map[(false + "DABHb>%'~lS>p_16&Jp]F<3|U>Rl/" == (false ? "I7tUzOIrM5p#%$K8]" : "i2Y;F/~v}zUsH&`7-&q-h`s4CwMH") ? (true ? true : false) + (true ? "t-[" : "fI~(svfbUd$5u?9I,x2c#/Rq{?L(") : 8.37927377385e-05 ** 0.0524621163237 + "mB`JsUi',{zU&w*" + HdLRabLfyI) -> _uRVHjaE_CK].filter[-12908.2701371 - -204808.755044 - 4 / -1054535711854274698 > (true ? -0.000683633670255 : -3.32281627014e-07) * 4611686018427387903 / 0].map[2073608289434735007 - 5 - 1 * 2 * (0.000535003357761 > -0.0516770617708 ? -3791690769545154450 * -4 : 64 * -1) -> WLsMtKdHXku]
+				out TH_sN_rNySIX suibFE.map[(false ? 2 : 0) * -4 + 1577687678245712049 * 4611686018427387903 -> _Bywle].filter[true].filter[(-754.815236686 > 32824.2574244 ? (false ? "lxViMUXtHWeaKSNM'gd{uIqSv" : "m)YEoEC{ZW,4A#3uv|0=Q1+T-?zX{qR") : (true ? "P#s<gt]OAKWSC;}`>&>" : "^({0s)QSrNYpN")) != (true == true ? (true ? "3P[^uj(-[ub{/(-2Ov0(O<B" : "NxuQQoM<^N") : -0.000347105063029 + "")]
+				out TH_sN_rNySIX suibFE.filter[false].map[4 - -13 - HdLRabLfyI - Jkfmz - -315906679069549154 -> JS].filter[292.56606551 ** -0.000129932930893 / (false ? 509.769736668 : -4.0976972405e-06) >= (-0.033704346991 != 0.00322457213539 ? -847559.402339 : -0.0393682046434 / 0.0496380137236)]
