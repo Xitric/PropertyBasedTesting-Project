@@ -80,7 +80,7 @@ let add_vars vars (channel_env, source_name, variables) = match vars with
     Variables(name, ids) ->
         List.fold_left
             (fun (channel_env, source_name, variables) id ->
-                (channel_env, source_name, (id, Integer)::variables))
+                (channel_env, source_name, (id, Integer, 21)::variables))
             (channel_env, name, variables)
             ids
 

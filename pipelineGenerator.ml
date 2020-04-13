@@ -67,7 +67,7 @@ and map_gen variables fuel =
     expression_gen expression_type (variables @ global_scope) 6 >>= function
       | None -> return None
       | Some expression -> identifier_gen >>= fun var ->
-        pipeline_gen [(var,expression_type)] (fuel/2) >>= fun next ->
+        pipeline_gen [(var, expression_type, 21)] (fuel/2) >>= fun next ->
           return (Some(Map(expression,var,next)))
 
 (* Generator for window *)

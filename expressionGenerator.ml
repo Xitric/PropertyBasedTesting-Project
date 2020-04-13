@@ -44,10 +44,6 @@ let global_scope = [
   ("*", Function(Float, Function(Float, Float)), 15);
   ("*", Function(Integer, Function(Integer, Integer)), 15);
 
-  (* String repetition - Not supported by DSL *)
-  (* ("*", Function(String, Function(Integer, String)), 15);
-  ("*", Function(Integer, Function(String, String)), 15); *)
-
   (* Division always returns a float *)
   ("/", Function(Float, Function(Float, Float)), 15);
   ("/", Function(Integer, Function(Integer, Float)), 15);
@@ -195,75 +191,28 @@ let rec string_of_boxed_literal = function
   | BoxedBoolean b -> string_of_bool b
   | BoxedString s -> "\"" ^ s ^ "\""
 
-(* let rec string_of_tree_node = function
-  | Literal l -> string_of_boxed_literal l
-  | Variable(s, _) -> s
-  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
-  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
-  | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication(_, Variable _) as r)) ->
-  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) -> *)
-    let left_precedence = get_precedence l in
-    let right_precedence = get_precedence r in
-    if left_precedence > right_precedence then
-      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
-    else if left_precedence < right_precedence then
-      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
-    else
-      (string_of_tree_node l) ^ (string_of_tree_node r)
-  | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")" *)
-
 let parenthesise exp = "(" ^ exp ^ ")"
 
+(* Serializer that takes operator precedence into account by adding parentheses
+when necessary to ensure type correctness. Does not guarantee that
+associativity is correct in relation to the original syntax tree - but this
+does not violate type correctness either*, and it makes the resulting
+expressions more challenging to parse. This is considered a good thing for
+testing.
+*There are no non-associative operators of equal precedence. *)
 let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
   | Variable(s, _) -> s
   | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
-  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
-  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication(_, Variable _) as r)) -> *)
-  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) -> *)
-  (* | OperatorApplication((OperatorApplication _ as l), (OperatorApplication(r, Variable(_, op_prec)))) -> *)
   | OperatorApplication(l, (OperatorApplication(r, Variable(s, op_prec)))) ->
     let left_precedence = get_precedence l in
     let right_precedence = get_precedence r in
-    if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l
-    ^
-    s
-    ^
-    if right_precedence < op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r
-
-
-    (* if left_precedence < op_prec then
-      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
-    else if left_precedence < right_precedence then
-      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
-    else
-      (string_of_tree_node l) ^ (string_of_tree_node r) *)
+    (if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l)
+    ^ " " ^ s ^ " " ^
+    (if right_precedence < op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r)
   | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
   | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
 
-(* let rec broken_string_of_tree_node = function
-  | Literal l -> string_of_boxed_literal l
-  | Variable(s, _) -> s
-  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
-  (* | OperatorApplication((OperatorApplication(_, Variable _) as l), (OperatorApplication _ as r)) -> *)
-  | OperatorApplication((OperatorApplication _ as l), (OperatorApplication _ as r)) ->
-    let left_precedence = get_precedence l in
-    let right_precedence = get_precedence r in
-    if left_precedence > right_precedence then
-      (string_of_tree_node l) ^ "(" ^ (string_of_tree_node r) ^ ")"
-    else if left_precedence < right_precedence then
-      "(" ^ (string_of_tree_node l) ^ ")" ^ (string_of_tree_node r)
-    else
-      (string_of_tree_node l) ^ (string_of_tree_node r)
-  | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) -> "(" ^ (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c) ^ ")" *)
-
 let serialize_exp = function
   | None -> failwith "ERR"
-  (* | Some ast -> print_endline (string_of_tree_node ast ^ "\n" ^ broken_string_of_tree_node ast); ast *)
   | Some ast -> print_endline (string_of_tree_node ast); ast
-
-
-(* (5+2) * 9 *)
-(* 2 * (9+5) *)
