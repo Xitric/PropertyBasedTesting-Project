@@ -2,10 +2,8 @@ open QCheck
 open ExpressionGenerator
 
 type execute_pipeline =
-  | Reduce
   | Mean
   | Median
-  | Mode
   | Var
   | StDev
   | Min
@@ -40,51 +38,67 @@ let type_gen =
 (* Generator for execute pipelines *)
 let execute_gen = 
   oneofl [
-    Reduce; Mean; Median; Mode; Var; StDev; Min; Max; Count;
+    Mean; Median; Var; StDev; Min; Max;
   ]
 
 (* Generator for filter *)
-let rec filter_gen variables fuel =
+let rec filter_gen goal_type current_type variables fuel =
   expression_gen Boolean (variables @ global_scope) 6 >>= function
     | None -> return None
-    | Some expression -> pipeline_gen variables (fuel/2) >>= fun next ->
+    | Some expression -> pipeline_gen_internal goal_type current_type variables (fuel/2) >>= fun next ->
       return (Some (Filter(expression, next)))
 
 (* Generator for map *)
-and map_gen variables fuel =
+and map_gen goal_type variables fuel =
   type_gen >>= fun expression_type ->
-    expression_gen expression_type (variables @ global_scope) 6 >>= function
-      | None -> return None
-      | Some expression -> identifier_gen >>= fun var ->
-        pipeline_gen [(var, expression_type, 21)] (fuel/2) >>= fun next ->
-          return (Some(Map(expression,var,next)))
+    map_gen_internal goal_type expression_type variables fuel
+
+and map_gen_internal goal_type expression_type variables fuel =
+  expression_gen expression_type (variables @ global_scope) 6 >>= function
+    | None -> return None
+    | Some expression -> identifier_gen >>= fun var ->
+      pipeline_gen_internal goal_type expression_type [(var, expression_type, 21)] (fuel/2) >>= fun next ->
+        return (Some(Map(expression,var,next)))
 
 (* Generator for window *)
-and window_gen variables fuel = 
+and window_gen goal_type variables fuel = 
   if List.length variables > 1 then
     return None
   else 
     (int_range 1 16) >>= fun number ->
       execute_gen >>= fun expip ->
-        pipeline_gen variables (fuel/2) >>= fun next ->
+        pipeline_gen_internal goal_type Integer variables (fuel/2) >>= fun next ->
           return (Some(Window(number, expip, next)))
 
-(* Pipeline generator *)
-and pipeline_gen variables fuel =
+and pipeline_gen_internal goal_type current_type variables fuel =
   if fuel = 0 then
+    if goal_type <> current_type then
+      (* The pipeline ends with the wrong type, so we force a map at the end *)
+      map_gen_internal goal_type goal_type variables fuel
+    else
+      return None
+  else
+    frequency [
+      (10, filter_gen goal_type current_type variables fuel);
+      (10, map_gen goal_type variables fuel);
+      (1, window_gen goal_type variables fuel)
+    ]
+
+(* Pipeline generator *)
+and pipeline_gen goal_type variables fuel =
+  if fuel = 0 then
+    (* TODO: Invoke generator with specific target type, similarly to above TODO *)
     return None
   else
     frequency [
-      (10, filter_gen variables fuel);
-      (10, map_gen variables fuel);
-      (1, window_gen variables fuel)
+      (10, filter_gen goal_type Integer variables fuel);
+      (10, map_gen goal_type variables fuel);
+      (1, window_gen goal_type variables fuel)
     ]
  
 let string_of_execute = function
-  | Reduce -> "reduce"
   | Mean -> "mean"
   | Median -> "median"
-  | Mode -> "mode"
   | Var -> "var"
   | StDev -> "stdev"
   | Min -> "min"
@@ -97,5 +111,3 @@ let rec string_of_pipeline_node = function
     | Filter (expression, next) -> ".filter[" ^ (string_of_tree_node expression) ^ "]" ^ (string_of_pipeline_node next)
     | Map (expression, id, next) -> ".map[" ^ (string_of_tree_node expression) ^ " -> " ^ id ^ "]" ^ (string_of_pipeline_node next)
     | Window (width, execute, next) -> ".byWindow[" ^ (string_of_int width) ^ "]." ^ (string_of_execute execute) ^ (string_of_pipeline_node next)
-    (* | _ -> "AGSHBASIGBAS? EUUHGH! SPRFFFFF!" *)
-

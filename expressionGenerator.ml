@@ -6,19 +6,19 @@ type expression_type =
   | Float
   | Boolean
   | String
-  | Function of expression_type * expression_type [@@deriving show { with_path = false }]
+  | Function of expression_type * expression_type
 
 type boxed_literal =
   | BoxedInteger of int
   | BoxedFloat of float
   | BoxedBoolean of bool
-  | BoxedString of string [@@deriving show { with_path = false }]
+  | BoxedString of string
 
 type tree_node =
   | Literal of boxed_literal
   | Variable of string * int
   | OperatorApplication of tree_node * tree_node
-  | ConditionalApplication of tree_node * tree_node * tree_node [@@deriving show { with_path = false }]
+  | ConditionalApplication of tree_node * tree_node * tree_node
 
 (* The integer represents operator precedence, and is taken from *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)

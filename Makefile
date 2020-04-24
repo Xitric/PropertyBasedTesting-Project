@@ -4,8 +4,8 @@ all:
 	make scaffoldingGenerator
 
 expressionGenerator:
-	ocamlbuild -use-ocamlfind -package qcheck,ppx_deriving.show expressionGenerator.byte
-	ocamlbuild -use-ocamlfind -package qcheck,ppx_deriving.show expressionGenerator.cma
+	ocamlbuild -use-ocamlfind -package qcheck expressionGenerator.byte
+	ocamlbuild -use-ocamlfind -package qcheck expressionGenerator.cma
 
 pipelineGenerator:
 	ocamlbuild -use-ocamlfind -package qcheck pipelineGenerator.byte

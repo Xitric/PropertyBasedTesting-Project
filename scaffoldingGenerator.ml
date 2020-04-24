@@ -42,12 +42,13 @@ let rec channel_gen environment =
         else channel_gen environment
 
 let rec out_gen environment =
-    let single_out_gen (channel_env, source_name, variables) =
+    let single_out_gen out_type (channel_env, source_name, variables) =
         oneofl channel_env >>= fun channel ->
-            pipeline_gen variables 6 >>= function
+            pipeline_gen out_type variables 6 >>= function
                 | None -> failwith "Error :'("
                 | Some pipeline -> return (Out(channel, source_name, pipeline))
-    in list_size (int_range 1 6) (single_out_gen environment)
+    in type_gen >>= fun out_type ->
+        list_size (int_range 1 6) (single_out_gen out_type environment)
 
 let data_gen environment =
     identifier_gen >>= fun name ->
@@ -152,9 +153,3 @@ let string_of_root_node = function
 
 let string_of_dsl = function
     | Dsl content -> String.concat "" (List.map string_of_root_node content)
-
-let generate =
-    let ast = generate1 (root_gen environment 6) in
-    let out = open_out "generated.iot" in
-    Printf.fprintf out "%s\n" (string_of_dsl ast);
-    close_out out
