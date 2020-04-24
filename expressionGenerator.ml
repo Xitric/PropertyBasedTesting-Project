@@ -6,23 +6,23 @@ type expression_type =
   | Float
   | Boolean
   | String
-  | Function of expression_type * expression_type
+  | Function of expression_type * expression_type [@@deriving show { with_path = false }]
 
 type boxed_literal =
   | BoxedInteger of int
   | BoxedFloat of float
   | BoxedBoolean of bool
-  | BoxedString of string
+  | BoxedString of string [@@deriving show { with_path = false }]
 
 type tree_node =
   | Literal of boxed_literal
   | Variable of string * int
   | OperatorApplication of tree_node * tree_node
-  | ConditionalApplication of tree_node * tree_node * tree_node
+  | ConditionalApplication of tree_node * tree_node * tree_node [@@deriving show { with_path = false }]
 
 (* The integer represents operator precedence, and is taken from *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)
-let global_scope = [
+let global_scope = [  
   (* Addition *)
   ("+", Function(Float, Function(Float, Float)), 14);
   ("+", Function(Integer, Function(Integer, Integer)), 14);
@@ -44,9 +44,9 @@ let global_scope = [
   ("*", Function(Float, Function(Float, Float)), 15);
   ("*", Function(Integer, Function(Integer, Integer)), 15);
 
-  (* Division always returns a float *)
+  (* Division *)
   ("/", Function(Float, Function(Float, Float)), 15);
-  ("/", Function(Integer, Function(Integer, Float)), 15);
+  ("/", Function(Integer, Function(Integer, Integer)), 15);
 
   (* Exponentiation always returns a float *)
   ("**", Function(Float, Function(Float, Float)), 16);
@@ -202,15 +202,29 @@ testing.
 let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
   | Variable(s, _) -> s
-  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)
+  | OperatorApplication(a, Variable("!", p)) -> " !(" ^ (string_of_tree_node a) ^ ")"
+  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)  
   | OperatorApplication(l, (OperatorApplication(r, Variable(s, op_prec)))) ->
     let left_precedence = get_precedence l in
     let right_precedence = get_precedence r in
     (if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l)
     ^ " " ^ s ^ " " ^
-    (if right_precedence < op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r)
+    (if right_precedence <= op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r)
   | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) -> (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : " ^ (string_of_tree_node c)
+  | ConditionalApplication(a, b, c) ->
+    (if get_precedence a <= 4 then
+      parenthesise (string_of_tree_node a)
+    else
+      (string_of_tree_node a))
+    ^ " ? " ^
+    (string_of_tree_node b)
+    ^ " : " ^
+    (string_of_tree_node c)
+  (* match c with
+    | OperatorApplication _
+    | ConditionalApplication _ -> "(" ^ (string_of_tree_node c) ^ ")"
+    | _ -> (string_of_tree_node c) *)
+  (* (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : (" ^ (string_of_tree_node c) ^ ")" *)
 
 let serialize_exp = function
   | None -> failwith "ERR"
