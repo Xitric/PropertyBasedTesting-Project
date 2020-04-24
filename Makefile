@@ -27,5 +27,12 @@ testMain:
 	ocamlbuild -use-ocamlfind -package qcheck main.cma
 	./main.byte
 
+.PHONY: tests
+expressionTests:
+	make all
+	ocamlbuild -use-ocamlfind -package qcheck expressionTests.byte
+	ocamlbuild -use-ocamlfind -package qcheck expressionTests.cma
+	./expressionTests.byte
+
 clean:
 	ocamlbuild -clean

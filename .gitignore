@@ -2,5 +2,6 @@ _build
 *.byte
 *.iot
 src-gen/
+iot-compiler.jar
 
 !test.iot
