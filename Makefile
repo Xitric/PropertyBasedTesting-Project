@@ -17,8 +17,8 @@ scaffoldingGenerator:
 	ocamlbuild -use-ocamlfind -package qcheck scaffoldingGenerator.cma
 
 utils:
-	ocamlbuild -use-ocamlfind utils.byte
-	ocamlbuild -use-ocamlfind utils.cma
+	ocamlbuild -use-ocamlfind -lib unix utils.byte
+	ocamlbuild -use-ocamlfind -lib unix utils.cma
 
 .PHONY: testMain
 testMain:
