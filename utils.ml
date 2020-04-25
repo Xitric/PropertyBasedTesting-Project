@@ -20,6 +20,17 @@ let read sock length =
         | 0 -> failwith "Received premature EOF"
         | _ -> buffer
 
+let read_all sock max =
+    let buffer = Bytes.create max in
+    let rec read_all_internal buffer ofs =
+        let length = Unix.read sock buffer ofs (max - ofs) in
+        let ofs = ofs + length in
+        if Bytes.contains (Bytes.sub buffer 0 ofs) '\003' then
+            Bytes.sub buffer 0 ofs
+        else
+            read_all_internal buffer ofs in
+    read_all_internal buffer 0
+
 let write_str sock payload =
     let byte_payload = Bytes.of_string payload in
     ignore (Unix.write sock byte_payload 0 (Bytes.length byte_payload))

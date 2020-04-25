@@ -32,13 +32,13 @@ socketServer.accept { socket ->
             shellThread.stop()      // Please kill me for committing this unholy sin
 
             if (shellResult.errored) {
-                output << 2         // Failure
+                output << 2         // Failure, no value
                                     // No value
             } else if (shellResult.result == null) {
                 output << 1         // No failure, but also no value
             } else {
                 output << 0         // Success
-                // output << result    // Value
+                // output << shellResult.result
                 // output << (char) 3  // End of transmission
             }
         }

@@ -13,13 +13,15 @@ let failure_code = '\050'
 
 (* We ignore errors like these, because they are expected with our generator *)
 (*      Division by zero *)
-(*      Division undefined *)
+(*      Division undefined 0/0 *)
+(*      Timeouts due to extreme exponentiation *)
+(* We just want to know if the expressions compile *)
 let execute_expression sock expression =
     write_str sock (expression ^ "\n");
     let response = read sock 1 in
     match Bytes.get response 0 with
         | n when n = success_code ->
-            (* let _ = read_all sock 2048 in *)
+            (* let _ = read_all sock 512 in *)
             true
         | n when n = arithmetic_code ->
             true
