@@ -2,10 +2,10 @@ open QCheck
 open Utils
 open ExpressionGenerator
 
-let int_exp_gen = make (expression_gen Integer global_scope 6)
-let float_exp_gen = make (expression_gen Float global_scope 6)
-let bool_exp_gen = make (expression_gen Boolean global_scope 6)
-let str_exp_gen = make (expression_gen String global_scope 6)
+let int_exp_gen = make (expression_gen Integer global_scope 20)
+let float_exp_gen = make (expression_gen Float global_scope 20)
+let bool_exp_gen = make (expression_gen Boolean global_scope 20)
+let str_exp_gen = make (expression_gen String global_scope 20)
 
 let success_code = '\048'
 let arithmetic_code = '\049'

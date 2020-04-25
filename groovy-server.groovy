@@ -5,6 +5,7 @@ socketServer.accept { socket ->
 
         def reader = input.newReader()
         def shell = new GroovyShell()
+        
         while(true) {
             def program = reader.readLine()
             println("Got: ${program}")
@@ -13,20 +14,40 @@ socketServer.accept { socket ->
                 break;
             }
 
-            try {
-                def result = shell.evaluate(program)
+            def shellResult = new ShellResult()
+            def shellThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        shellResult.result = shell.evaluate(program)
+                    } catch (ArithmeticException) {
+                        // Ignore
+                    } catch (Throwable) {
+                        shellResult.errored = true
+                    }
+                }
+            })
+            shellThread.start()
+            shellThread.join(1000)  // Thread hangs if one second passes with no result
+            shellThread.stop()      // Please kill me for committing this unholy sin
+
+            if (shellResult.errored) {
+                output << 2         // Failure
+                                    // No value
+            } else if (shellResult.result == null) {
+                output << 1         // No failure, but also no value
+            } else {
                 output << 0         // Success
                 // output << result    // Value
                 // output << (char) 3  // End of transmission
-            } catch (ArithmeticException) {
-                output << 1         // Ignore arithmetic exceptions
-                                    // No value
-            } catch (Throwable) {
-                output << 2         // Failure
-                                    // No value
             }
         }
 
         println("Goodbye")
     }
+}
+
+class ShellResult {
+    Object result;
+    boolean errored;
 }
