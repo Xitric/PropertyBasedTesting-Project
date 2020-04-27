@@ -20,6 +20,13 @@ utils:
 	ocamlbuild -use-ocamlfind -lib unix utils.byte
 	ocamlbuild -use-ocamlfind -lib unix utils.cma
 
+.PHONY: stat
+stat:
+	make all
+	ocamlbuild -use-ocamlfind -package qcheck expressionStatistics.byte
+	ocamlbuild -use-ocamlfind -package qcheck expressionStatistics.cma
+	./expressionStatistics.byte
+
 .PHONY: testMain
 testMain:
 	make all

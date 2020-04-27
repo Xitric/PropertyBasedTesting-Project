@@ -20,9 +20,9 @@ socketServer.accept { socket ->
                 public void run() {
                     try {
                         shellResult.result = shell.evaluate(program)
-                    } catch (ArithmeticException) {
+                    } catch (ArithmeticException e) {
                         // Ignore
-                    } catch (Throwable) {
+                    } catch (Throwable e) {
                         shellResult.errored = true
                     }
                 }

@@ -16,9 +16,9 @@ type boxed_literal =
 
 type tree_node =
   | Literal of boxed_literal
-  | Variable of string * int
-  | OperatorApplication of tree_node * tree_node
-  | ConditionalApplication of tree_node * tree_node * tree_node
+  | Variable of string * expression_type * int
+  | OperatorApplication of tree_node * expression_type * tree_node * expression_type
+  | ConditionalApplication of tree_node * tree_node * expression_type * tree_node * expression_type
 
 (* The integer represents operator precedence, and is taken from *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)
@@ -81,8 +81,8 @@ let global_scope = [
 
 let rec get_precedence = function
   | Literal _ -> 21
-  | Variable(_, p) -> p
-  | OperatorApplication(_, child) -> get_precedence child
+  | Variable(_, _, p) -> p
+  | OperatorApplication(_, _, child, _) -> get_precedence child
   | ConditionalApplication _ -> 4
 
 open Gen
@@ -126,7 +126,7 @@ let variable_gen variable_type scope =
   (* Return a generator choosing between the variables from above *)
   match List.filter (fun variable -> type_of variable = variable_type) scope with
     | [] -> [return None]
-    | variables -> [map (fun s -> Some(Variable (identifier_of s, precedence_of s))) (oneofl variables)]
+    | variables -> [map (fun s -> Some(Variable (identifier_of s, type_of s, precedence_of s))) (oneofl variables)]
 
 let rec indir_gen goal_type scope fuel =
   (* Step 1: Determine if a given type can be resolved to the goal type *)
@@ -144,7 +144,7 @@ let rec indir_gen goal_type scope fuel =
   let rec resolve_arguments_to_goal_inner previous function_type = match function_type with 
     | _ when function_type = goal_type -> return (Some previous)
     | Function(a,return_type) -> (expression_gen a scope (fuel/2) >>= function
-      | Some arg -> resolve_arguments_to_goal_inner (OperatorApplication(arg, previous)) return_type
+      | Some arg -> resolve_arguments_to_goal_inner (OperatorApplication(arg, a, previous, function_type)) return_type
       | None -> return None)
     | _ -> return None in
 
@@ -152,8 +152,8 @@ let rec indir_gen goal_type scope fuel =
   [match operators with
     | [] -> return None
     | operators -> oneofl operators >>= function operator -> match operator with
-      | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator, precedence_of operator)))
-      | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator, precedence_of operator)) (type_of operator)]
+      | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator, type_of operator, precedence_of operator)))
+      | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator, type_of operator, precedence_of operator)) (type_of operator)]
 
 and conditional_gen goal_type scope fuel =
   [expression_gen Boolean scope (fuel / 2) >>= function
@@ -162,7 +162,7 @@ and conditional_gen goal_type scope fuel =
       | None -> return None
       | Some left_exp -> expression_gen goal_type scope (fuel / 2) >>= function
         | None -> return None
-        | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, right_exp)))]
+        | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, goal_type, right_exp, goal_type)))]
 
 and expression_gen goal_type scope fuel =
   let generators = if fuel = 0 then
@@ -201,17 +201,17 @@ testing.
 *There are no non-associative operators of equal precedence. *)
 let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
-  | Variable(s, _) -> s
-  | OperatorApplication(a, Variable("!", p)) -> " !(" ^ (string_of_tree_node a) ^ ")"
-  | OperatorApplication(a, Variable(s, p)) -> " " ^ s ^ " " ^ (string_of_tree_node a)  
-  | OperatorApplication(l, (OperatorApplication(r, Variable(s, op_prec)))) ->
+  | Variable(s, _, _) -> s
+  | OperatorApplication(a, _, Variable("!", _, p), _) -> " !(" ^ (string_of_tree_node a) ^ ")"
+  | OperatorApplication(a, _, Variable(s, _, p), _) -> " " ^ s ^ " " ^ (string_of_tree_node a)  
+  | OperatorApplication(l, _, (OperatorApplication(r, _, Variable(s, _, op_prec), _)), _) ->
     let left_precedence = get_precedence l in
     let right_precedence = get_precedence r in
     (if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l)
     ^ " " ^ s ^ " " ^
     (if right_precedence <= op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r)
-  | OperatorApplication(a, b) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, c) ->
+  | OperatorApplication(a, _, b, _) -> (string_of_tree_node a) ^ (string_of_tree_node b)
+  | ConditionalApplication(a, b, _, c, _) ->
     (if get_precedence a <= 4 then
       parenthesise (string_of_tree_node a)
     else
@@ -220,12 +220,60 @@ let rec string_of_tree_node = function
     (string_of_tree_node b)
     ^ " : " ^
     (string_of_tree_node c)
-  (* match c with
-    | OperatorApplication _
-    | ConditionalApplication _ -> "(" ^ (string_of_tree_node c) ^ ")"
-    | _ -> (string_of_tree_node c) *)
-  (* (string_of_tree_node a) ^ " ? " ^ (string_of_tree_node b) ^ " : (" ^ (string_of_tree_node c) ^ ")" *)
 
 let serialize_exp = function
   | None -> failwith "ERR"
   | Some ast -> print_endline (string_of_tree_node ast); ast
+
+(* Shrinker *)
+let (<+>) = Iter.(<+>)
+let literal_shrinker = function
+  | BoxedInteger old ->
+    Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int old)
+  | BoxedFloat old ->
+    Iter.map (fun v -> Literal (BoxedFloat (float_of_int v))) (Shrink.int (int_of_float old))
+  | BoxedBoolean old ->
+    if not old then
+      Iter.return (Literal (BoxedBoolean true))
+    else Iter.empty
+  | BoxedString old ->
+    Iter.map (fun v -> Literal (BoxedString v)) (Shrink.string old)
+
+let make_lit = function
+  | Integer -> Some (Literal (BoxedInteger (generate1 int_gen)))
+  | Float -> Some (Literal (BoxedFloat (generate1 float_gen)))
+  | Boolean -> Some (Literal (BoxedBoolean (generate1 bool_gen)))
+  | String -> Some (Literal (BoxedString (generate1 string_gen)))
+  | _ -> None
+
+let rec tree_node_shrinker = function
+  | Literal l -> literal_shrinker l
+  | Variable (s, t, i) -> (match make_lit t with
+    | None -> Iter.empty
+    | Some lit -> Iter.return lit)
+  | OperatorApplication (a, a_type, child, child_type) ->
+      (match child with
+      (* TODO: Get actual return type of Function(_, Function(_, Here)) *)
+      (* Like resolves_to ... *)
+        | OperatorApplication(b, b_type, Variable _, Function(_, return_type)) ->
+          (match make_lit return_type with
+            | None -> Iter.empty
+            | Some lit -> Iter.return lit)
+          <+>
+          (if a_type == return_type then Iter.return a else Iter.empty)
+          <+>
+          (if b_type == return_type then Iter.return b else Iter.empty)
+        | _ -> Iter.empty)
+      (* (match a with
+        | OperatorApplication(_, _, (OperatorApplication(_, _, Variable _, _)), _) when  -> Iter.return a
+        | _ -> Iter.empty) *)
+      <+> Iter.map (fun a' -> OperatorApplication(a', a_type, child, child_type)) (tree_node_shrinker a)
+      <+> (match child with
+        | Variable _ -> Iter.empty
+        | _ -> (Iter.map (fun child' -> OperatorApplication(a, a_type, child', child_type)) (tree_node_shrinker child))
+      )
+  | ConditionalApplication (a, b, b_type, c, c_type) ->
+    Iter.of_list [b;c]
+    <+> Iter.map (fun a' -> ConditionalApplication(a', b, b_type, c, c_type)) (tree_node_shrinker a)
+    <+> Iter.map (fun b' -> ConditionalApplication(a, b', b_type, c, c_type)) (tree_node_shrinker b)
+    <+> Iter.map (fun c' -> ConditionalApplication(a, b, b_type, c', c_type)) (tree_node_shrinker c)

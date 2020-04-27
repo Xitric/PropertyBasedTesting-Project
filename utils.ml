@@ -1,6 +1,6 @@
 (* Some useful serializers *)
 let string_of_opt serializer = function
-    | None -> ""
+    | None -> "None"
     | Some var -> serializer var
 
 let to_file serializer ast file_name =
