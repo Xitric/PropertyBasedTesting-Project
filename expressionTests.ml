@@ -16,8 +16,9 @@ let arithmetic_code = '\049'
 let failure_code = '\050'
 
 (* We ignore errors like these, because they are expected with our generator *)
-(*      Division by zero *)
-(*      Division undefined 0/0 *)
+(*      Division by zero: Still type correct *)
+(*      Division undefined 0/0: Also type correct *)
+(*      NumberFormatException: An exponentiation with Infinity *)
 (*      Timeouts due to extreme exponentiation *)
 (* We just want to know if the expressions compile *)
 let execute_expression sock expression =

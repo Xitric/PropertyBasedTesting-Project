@@ -20,7 +20,7 @@ socketServer.accept { socket ->
                 public void run() {
                     try {
                         shellResult.result = shell.evaluate(program)
-                    } catch (ArithmeticException e) {
+                    } catch (ArithmeticException | NumberFormatException e) {
                         // Ignore
                     } catch (Throwable e) {
                         shellResult.errored = true

@@ -34,7 +34,6 @@ let global_scope = [
   ("+", Function(String, Function(Integer, String)), 14);
   ("+", Function(Integer, Function(String, String)), 14);
   ("+", Function(String, Function(Boolean, String)), 14);
-  ("+", Function(Boolean, Function(String, String)), 14);
 
   (* Subtraction *)
   ("-", Function(Float, Function(Float, Float)), 14);
@@ -79,14 +78,44 @@ let global_scope = [
   (">=", Function(Integer, Function(Integer, Boolean)), 12);
 ]
 
+let identifier_of (i, _, _) = i
+let type_of (_, t, _) = t
+let precedence_of (_, _, p) = p
+
 let rec get_precedence = function
   | Literal _ -> 21
   | Variable(_, _, p) -> p
   | OperatorApplication(_, _, child, _) -> get_precedence child
   | ConditionalApplication _ -> 4
 
-open Gen
+(* Used to determine the type that a tree node resolves to when applied *)
+(* completely *)
+let rec resolves_to = function
+  | Literal lit -> (match lit with
+    | BoxedInteger _ -> Integer
+    | BoxedFloat _ -> Float
+    | BoxedBoolean _ -> Boolean
+    | BoxedString _ -> String)
+  | Variable(_, t, _) ->
+    let rec resolves_to_function = function
+      | Function(_, next) -> resolves_to_function next
+      | t -> t in
+    resolves_to_function t
+  | OperatorApplication(_, _, child, _) -> resolves_to child
+  | ConditionalApplication(_, _, t, _, _) -> t
 
+(* Determines if two types are compatible, such as using an Integer in place *)
+(* of a Float *)
+let rec types_compatible expected proposed =
+  if expected == proposed then true else
+  match (expected, proposed) with
+    | (Float, Integer) -> true
+    | (Function(t_expected, r_expected), Function(t_proposed, r_proposed)) ->
+      types_compatible t_expected t_proposed && types_compatible r_expected r_proposed
+    | _ -> false
+
+(* Generators *)
+open Gen
 let int_gen = frequency [
   (3, small_signed_int);
   (1, oneofl int_corners);
@@ -102,11 +131,13 @@ let bool_gen = frequency [
 ]
 
 let char_gen = frequency [
-  (* Capture all readable characters except quotation marks and backslash *)
+  (* Capture all readable characters except quotation marks, dollar sign, *)
+  (* and backslash. These give problems in Groovy. *)
   (* Weighed by the number of characters in each range *)
-  (57, char_range '#' '[');
-  (34, char_range ']' '~');
   (2, char_range ' ' '!');
+  (1, return '#');
+  (55, char_range '%' '[');
+  (34, char_range ']' '~');
 ]
 let string_gen = string_size (int_bound 32) ~gen:(char_gen)
 
@@ -117,21 +148,17 @@ let literal_gen literal_type = match literal_type with
   | String -> [map (fun s -> Some(Literal(BoxedString s))) (string_gen)]
   | _ -> [return None]
 
-let identifier_of (i, _, _) = i
-let type_of (_, t, _) = t
-let precedence_of (_, _, p) = p
-
 let variable_gen variable_type scope = 
   (* Choose variables from scope that have the specified variable_type *)
   (* Return a generator choosing between the variables from above *)
-  match List.filter (fun variable -> type_of variable = variable_type) scope with
+  match List.filter (fun variable -> types_compatible variable_type (type_of variable)) scope with
     | [] -> [return None]
     | variables -> [map (fun s -> Some(Variable (identifier_of s, type_of s, precedence_of s))) (oneofl variables)]
 
 let rec indir_gen goal_type scope fuel =
   (* Step 1: Determine if a given type can be resolved to the goal type *)
   let rec resolves_to_goal t = match t with
-    | _ when goal_type = t -> true
+    | _ when types_compatible goal_type t -> true
     | Function(a, b) -> resolves_to_goal b
     | _ -> false in
     
@@ -142,7 +169,7 @@ let rec indir_gen goal_type scope fuel =
 
   (* Step 3: Generate as many arguments as necessary to resolve the chosen generator to the goal type *)
   let rec resolve_arguments_to_goal_inner previous function_type = match function_type with 
-    | _ when function_type = goal_type -> return (Some previous)
+    | _ when types_compatible goal_type function_type -> return (Some previous)
     | Function(a,return_type) -> (expression_gen a scope (fuel/2) >>= function
       | Some arg -> resolve_arguments_to_goal_inner (OperatorApplication(arg, a, previous, function_type)) return_type
       | None -> return None)
@@ -152,7 +179,7 @@ let rec indir_gen goal_type scope fuel =
   [match operators with
     | [] -> return None
     | operators -> oneofl operators >>= function operator -> match operator with
-      | _ when (type_of operator) = goal_type -> return (Some(Variable(identifier_of operator, type_of operator, precedence_of operator)))
+      | _ when types_compatible goal_type (type_of operator) -> return (Some(Variable(identifier_of operator, type_of operator, precedence_of operator)))
       | _ -> resolve_arguments_to_goal_inner (Variable(identifier_of operator, type_of operator, precedence_of operator)) (type_of operator)]
 
 and conditional_gen goal_type scope fuel =
@@ -184,6 +211,7 @@ and expression_gen goal_type scope fuel =
       | None -> expression_gen goal_type scope fuel
       | Some value -> return (Some value)
 
+(* Serialization *)
 let rec string_of_boxed_literal = function
   | BoxedInteger i -> string_of_int i
   | BoxedFloat f -> string_of_float f
@@ -203,8 +231,8 @@ let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
   | Variable(s, _, _) -> s
   | OperatorApplication(a, _, Variable("!", _, p), _) -> " !(" ^ (string_of_tree_node a) ^ ")"
-  | OperatorApplication(a, _, Variable(s, _, p), _) -> " " ^ s ^ " " ^ (string_of_tree_node a)  
-  | OperatorApplication(l, _, (OperatorApplication(r, _, Variable(s, _, op_prec), _)), _) ->
+  | OperatorApplication(a, _, Variable(s, _, p), _) -> (string_of_tree_node a) ^ " " ^ s ^ " "
+  | OperatorApplication(r, _, (OperatorApplication(l, _, Variable(s, _, op_prec), _)), _) ->
     let left_precedence = get_precedence l in
     let right_precedence = get_precedence r in
     (if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l)
@@ -231,7 +259,8 @@ let literal_shrinker = function
   | BoxedInteger old ->
     Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int old)
   | BoxedFloat old ->
-    Iter.map (fun v -> Literal (BoxedFloat (float_of_int v))) (Shrink.int (int_of_float old))
+    Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int (int_of_float old))
+    (* <+> Float shrinking *)
   | BoxedBoolean old ->
     if not old then
       Iter.return (Literal (BoxedBoolean true))
@@ -253,20 +282,16 @@ let rec tree_node_shrinker = function
     | Some lit -> Iter.return lit)
   | OperatorApplication (a, a_type, child, child_type) ->
       (match child with
-      (* TODO: Get actual return type of Function(_, Function(_, Here)) *)
-      (* Like resolves_to ... *)
-        | OperatorApplication(b, b_type, Variable _, Function(_, return_type)) ->
+        | OperatorApplication(b, b_type, var, _) ->
+          let return_type = resolves_to var in
           (match make_lit return_type with
             | None -> Iter.empty
             | Some lit -> Iter.return lit)
           <+>
-          (if a_type == return_type then Iter.return a else Iter.empty)
+          (if types_compatible return_type a_type then Iter.return a else Iter.empty)
           <+>
-          (if b_type == return_type then Iter.return b else Iter.empty)
+          (if types_compatible return_type b_type then Iter.return b else Iter.empty)
         | _ -> Iter.empty)
-      (* (match a with
-        | OperatorApplication(_, _, (OperatorApplication(_, _, Variable _, _)), _) when  -> Iter.return a
-        | _ -> Iter.empty) *)
       <+> Iter.map (fun a' -> OperatorApplication(a', a_type, child, child_type)) (tree_node_shrinker a)
       <+> (match child with
         | Variable _ -> Iter.empty
