@@ -33,7 +33,7 @@ let global_scope = [
   ("+", Function(Float, Function(String, String)), 14);
   ("+", Function(String, Function(Integer, String)), 14);
   ("+", Function(Integer, Function(String, String)), 14);
-  ("+", Function(String, Function(Boolean, String)), 14);
+  ("+", Function(Boolean, Function(String, String)), 14);
 
   (* Subtraction *)
   ("-", Function(Float, Function(Float, Float)), 14);
@@ -230,9 +230,10 @@ testing.
 let rec string_of_tree_node = function
   | Literal l -> string_of_boxed_literal l
   | Variable(s, _, _) -> s
-  | OperatorApplication(a, _, Variable("!", _, p), _) -> " !(" ^ (string_of_tree_node a) ^ ")"
-  | OperatorApplication(a, _, Variable(s, _, p), _) -> (string_of_tree_node a) ^ " " ^ s ^ " "
-  | OperatorApplication(r, _, (OperatorApplication(l, _, Variable(s, _, op_prec), _)), _) ->
+  | OperatorApplication(a, _, Variable(s, _, op_prec), _) ->
+    " " ^ s ^ " " ^
+    (if get_precedence a <= op_prec then parenthesise (string_of_tree_node a) else string_of_tree_node a)
+  | OperatorApplication(l, _, (OperatorApplication(r, _, Variable(s, _, op_prec), _)), _) ->
     let left_precedence = get_precedence l in
     let right_precedence = get_precedence r in
     (if left_precedence < op_prec then parenthesise (string_of_tree_node l) else string_of_tree_node l)
