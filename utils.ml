@@ -17,7 +17,7 @@ let to_file_opt serializer ast file_name =
 let read sock length =
     let buffer = Bytes.create length in
     match Unix.read sock buffer 0 length with
-        | 0 -> failwith "Received premature EOF"
+        | 0 -> raise Not_found
         | _ -> buffer
 
 let read_all sock max =

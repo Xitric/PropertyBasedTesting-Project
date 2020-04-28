@@ -7,17 +7,19 @@ type data_node =
     | Out of string * string * pipeline_node
 
 type sensor_node =
+    | Data of string * data_node list
+
+type sampler_node =
     | FrequencySample of int
     | SignalSample
-    | Data of string * data_node list
 
 type variables =
     | Variables of string * string list
 
 type board_node =
     | In of string
-    | ExtSensor of string * int list * variables * sensor_node list
-    | OnbSensor of string * variables * sensor_node list
+    | ExtSensor of string * int list * variables * sampler_node * sensor_node list
+    | OnbSensor of string * variables * sampler_node * sensor_node list
 
 type root_node =
     | Language of string
@@ -82,7 +84,7 @@ let sensor_gen environment =
                     variables_gen length >>= fun vars ->
                         let new_environment = add_vars vars environment in
                         data_gen new_environment >>= fun datas ->
-                            return (ExtSensor(name, pins, vars, [sampler;datas])) in
+                            return (ExtSensor(name, pins, vars, sampler, [datas])) in
     (* let onb_sensor_gen environment = ? in *)
     
     sample_gen >>= fun sampler ->
@@ -124,13 +126,15 @@ let root_gen environment fuel =
 
 (* Serializers *)
 let string_of_data_node = function
-    | Out(channel, source, pipeline) -> "\t\t\t\tout " ^ channel ^ " " ^ source ^ (string_of_pipeline_node (Some pipeline) ^ "\n")
+    | Out(channel, source, pipeline) -> "\t\t\tout " ^ channel ^ " " ^ source ^ (string_of_pipeline_node (Some pipeline) ^ "\n")
 
 let string_of_sensor_node = function
-    | FrequencySample freq -> "\t\t\tsample frequency " ^ (string_of_int freq) ^ "\n"
-    | SignalSample -> "\t\t\tsample signal\n"
-    | Data(name, outs) -> "\t\t\tdata " ^ name ^ "\n" ^
+    | Data(name, outs) -> "\t\tdata " ^ name ^ "\n" ^
         String.concat "" (List.map string_of_data_node outs)
+
+let string_of_sampler_node = function
+    | FrequencySample freq -> "\t\tsample frequency " ^ (string_of_int freq) ^ "\n"
+    | SignalSample -> "\t\tsample signal\n"
 
 let string_of_variables = function
     | Variables(name, ids) -> " as " ^ name ^ "(" ^
@@ -139,11 +143,12 @@ let string_of_variables = function
 
 let string_of_board_node = function
     | In channel -> "\tin " ^ channel ^ "\n"
-    | ExtSensor(name, pins, vars, body) -> "\tsensor " ^ name ^ "(" ^
+    | ExtSensor(name, pins, vars, sampler, body) -> "\tsensor " ^ name ^ "(" ^
         String.concat ", " (List.map string_of_int pins)
     ^ ")" ^ (string_of_variables vars) ^ "\n" ^
+        string_of_sampler_node sampler ^
         String.concat "" (List.map string_of_sensor_node body)
-    | OnbSensor(type_name, vars, body) -> failwith "Unsupported"
+    | OnbSensor(type_name, vars, sampler, body) -> failwith "Unsupported"
 
 let string_of_root_node = function
     | Language lang -> "language " ^ lang ^ "\n"
@@ -153,3 +158,37 @@ let string_of_root_node = function
 
 let string_of_dsl = function
     | Dsl content -> String.concat "" (List.map string_of_root_node content)
+
+(* Shrinker *)
+let (>>=) = Iter.(>>=)
+let non_empty_list_shrinker elem_shrinker = function
+    | [] -> Iter.empty
+    | a::[] as list -> Shrink.list_elems elem_shrinker list
+    | list -> Shrink.list ~shrink:elem_shrinker list >>= function
+        | [] -> Iter.return [List.hd list]
+        | list' -> Iter.return list'
+
+let data_node_shrinker = function
+    | Out(channel, id, pipeline) ->
+        Iter.map (fun pipeline' -> Out(channel, id, pipeline')) (pipeline_shrinker pipeline)
+
+let sensor_node_shrinker = function
+    | Data(id, outs) ->
+        Iter.map (fun outs' -> Data(id, outs')) (non_empty_list_shrinker data_node_shrinker outs)
+
+let board_node_shrinker = function
+    | In _ -> Iter.empty
+    | ExtSensor(id, pins, vars, sampler, datas) ->
+        Iter.map (fun datas' -> ExtSensor(id, pins, vars, sampler, datas')) (non_empty_list_shrinker sensor_node_shrinker datas)
+    | OnbSensor(id, vars, sampler, datas) ->
+        Iter.map (fun datas' -> OnbSensor(id, vars, sampler, datas')) (non_empty_list_shrinker sensor_node_shrinker datas)
+
+let root_node_shrinker = function
+    | Language l -> Iter.empty
+    | Channel ch -> Iter.empty
+    | Board(name, version, sensors) ->
+        Iter.map (fun sensors' -> Board(name, version, sensors')) (non_empty_list_shrinker board_node_shrinker sensors)
+
+let dsl_shrinker = function
+    | Dsl(content) ->
+        Iter.map (fun content' -> Dsl(content')) (Shrink.list_elems root_node_shrinker content)

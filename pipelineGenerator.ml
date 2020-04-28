@@ -111,3 +111,26 @@ let rec string_of_pipeline_node = function
     | Filter (expression, next) -> ".filter[" ^ (string_of_tree_node expression) ^ "]" ^ (string_of_pipeline_node next)
     | Map (expression, id, next) -> ".map[" ^ (string_of_tree_node expression) ^ " -> " ^ id ^ "]" ^ (string_of_pipeline_node next)
     | Window (width, execute, next) -> ".byWindow[" ^ (string_of_int width) ^ "]." ^ (string_of_execute execute) ^ (string_of_pipeline_node next)
+
+(* Shrinker *)
+let (<+>) = Iter.(<+>)
+let rec pipeline_shrinker = function
+  | Filter(exp, next) ->
+    (match next with
+      | None -> Iter.empty
+      | Some n ->
+        Iter.return n
+        <+> Iter.map (fun next' -> Filter(exp, Some next')) (pipeline_shrinker n))
+    <+> Iter.map (fun exp' -> Filter(exp', next)) (tree_node_shrinker exp)
+  | Map(exp, id, next) ->
+    (match next with
+      | None -> Iter.empty
+      | Some n ->
+        Iter.map (fun next' -> Map(exp, id, Some next')) (pipeline_shrinker n))
+    <+> Iter.map (fun exp' -> Map(exp', id, next)) (tree_node_shrinker exp)
+  | Window(width, exec, next) ->
+    (match next with
+      | None -> Iter.empty
+      | Some n ->
+        Iter.map (fun next' -> Window(width, exec, Some next')) (pipeline_shrinker n))
+    <+> Iter.map (fun w -> Window(w, exec, next)) (Shrink.int width)
