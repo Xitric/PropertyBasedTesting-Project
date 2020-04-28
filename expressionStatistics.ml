@@ -4,26 +4,26 @@ open ExpressionGenerator
 let nodes = function 
     | None -> -1
     | Some node -> match node with
-        | Literal l -> 0
-        | Variable (_, _) -> 1
-        | OperatorApplication (_, _) -> 2
-        | ConditionalApplication (_, _, _) -> 3
+        | Literal _ -> 0
+        | Variable _ -> 1
+        | OperatorApplication _ -> 2
+        | ConditionalApplication _ -> 3
 
 let rec size_literal_nodes = function 
     | None -> 0
     | Some node -> match node with 
-      | Literal l -> 1
-      | Variable (_, _) -> 0
-      | OperatorApplication (n1, n2) -> size_literal_nodes (Some (n1)) + size_literal_nodes (Some(n2))
-      | ConditionalApplication (n1, n2, n3) -> size_literal_nodes (Some(n1)) + size_literal_nodes (Some(n2)) + size_literal_nodes (Some(n3))
+      | Literal _ -> 1
+      | Variable _ -> 0
+      | OperatorApplication (n1, _, n2, _) -> size_literal_nodes (Some (n1)) + size_literal_nodes (Some(n2))
+      | ConditionalApplication (n1, n2, _, n3, _) -> size_literal_nodes (Some(n1)) + size_literal_nodes (Some(n2)) + size_literal_nodes (Some(n3))
 
 let rec size_variable_nodes = function 
       | None -> 0
       | Some node -> match node with 
-        | Literal l -> 0
-        | Variable (_, _) -> 1
-        | OperatorApplication (n1, n2) -> size_variable_nodes (Some (n1)) + size_variable_nodes (Some(n2))
-        | ConditionalApplication (n1, n2, n3) -> size_variable_nodes (Some(n1)) + size_variable_nodes (Some(n2)) + size_variable_nodes (Some(n3))
+        | Literal _ -> 0
+        | Variable _ -> 1
+        | OperatorApplication (n1, _, n2, _) -> size_variable_nodes (Some (n1)) + size_variable_nodes (Some(n2))
+        | ConditionalApplication (n1, n2, _, n3, _) -> size_variable_nodes (Some(n1)) + size_variable_nodes (Some(n2)) + size_variable_nodes (Some(n3))
        
 let fuel = 6     
 
