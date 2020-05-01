@@ -46,11 +46,11 @@ let rec channel_gen environment =
 let rec out_gen environment =
     let single_out_gen out_type (channel_env, source_name, variables) =
         oneofl channel_env >>= fun channel ->
-            pipeline_gen out_type variables 6 >>= function
+            pipeline_gen out_type variables 25 >>= function
                 | None -> failwith "Error :'("
                 | Some pipeline -> return (Out(channel, source_name, pipeline))
     in type_gen >>= fun out_type ->
-        list_size (int_range 1 6) (single_out_gen out_type environment)
+        list_size (int_range 1 12) (single_out_gen out_type environment)
 
 let data_gen environment =
     identifier_gen >>= fun name ->

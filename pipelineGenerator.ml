@@ -193,7 +193,14 @@ let rec pipeline_shrinker scope current =
       )
     | _ -> Iter.empty
   )
-  <+>
+  (* 390736775 *)
+  (* out jkvqx du_EzXXc.map["" + (true ? 0 : -91449.8009972) -> BOTAen].byWindow[0].median.map[0 -> RBYyk_].map[0 -> TFaRFNFOYxgT] *)
+  (* out jkvqx du_EzXXc.                                                                   map[0 -> RBYyk_].map[0 + RBYyk_ -> TFaRFNFOYxgT] *) *)
+  
+  (* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)
+  (* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)
+
+
   match current with
   | Filter(exp, next) ->
     (match next with

@@ -33,9 +33,16 @@ let _ = match Unix.fork () with
                 code = (Bytes.make 1 '\000')) in
         
         (* QCheck_runner.set_seed 528671099; *)
+     
+        QCheck_runner.set_seed 187700661;
+        (* 390736775 *)
+        (* 187700661 *)
+        
         let result = QCheck_runner.run_tests ~verbose:true [
             compile_test
         ] in
         stop socket;
         ignore (Sys.command "rm -r src-gen");
         result
+
+
