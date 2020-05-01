@@ -75,6 +75,7 @@ let _ = match Unix.fork () with
                 let expression = string_of_opt string_of_tree_node ast in
                 execute_expression socket expression) in
 
+        (* QCheck_runner.set_seed 89125461; *)
         let result = QCheck_runner.run_tests ~verbose:true [
             int_exp_test;
             float_exp_test;

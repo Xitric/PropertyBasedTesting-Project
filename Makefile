@@ -5,40 +5,40 @@ all:
 	make utils
 
 expressionGenerator:
-	ocamlbuild -use-ocamlfind -package qcheck expressionGenerator.byte
-	ocamlbuild -use-ocamlfind -package qcheck expressionGenerator.cma
+	ocamlbuild -use-ocamlfind expressionGenerator.byte
+	ocamlbuild -use-ocamlfind expressionGenerator.cma
 
 pipelineGenerator:
-	ocamlbuild -use-ocamlfind -package qcheck pipelineGenerator.byte
-	ocamlbuild -use-ocamlfind -package qcheck pipelineGenerator.cma
+	ocamlbuild -use-ocamlfind pipelineGenerator.byte
+	ocamlbuild -use-ocamlfind pipelineGenerator.cma
 
 scaffoldingGenerator:
-	ocamlbuild -use-ocamlfind -package qcheck scaffoldingGenerator.byte
-	ocamlbuild -use-ocamlfind -package qcheck scaffoldingGenerator.cma
+	ocamlbuild -use-ocamlfind scaffoldingGenerator.byte
+	ocamlbuild -use-ocamlfind scaffoldingGenerator.cma
 
 utils:
-	ocamlbuild -use-ocamlfind -lib unix utils.byte
-	ocamlbuild -use-ocamlfind -lib unix utils.cma
+	ocamlbuild -use-ocamlfind utils.byte
+	ocamlbuild -use-ocamlfind utils.cma
 
 .PHONY: stat
 stat:
 	make all
-	ocamlbuild -use-ocamlfind -package qcheck expressionStatistics.byte
-	ocamlbuild -use-ocamlfind -package qcheck expressionStatistics.cma
+	ocamlbuild -use-ocamlfind expressionStatistics.byte
+	ocamlbuild -use-ocamlfind expressionStatistics.cma
 	./expressionStatistics.byte
 
 .PHONY: testMain
 testMain:
 	make all
-	ocamlbuild -use-ocamlfind -package qcheck main.byte
-	ocamlbuild -use-ocamlfind -package qcheck main.cma
+	ocamlbuild -use-ocamlfind main.byte
+	ocamlbuild -use-ocamlfind main.cma
 	./main.byte
 
 .PHONY: tests
 expressionTests:
 	make all
-	ocamlbuild -use-ocamlfind -package qcheck expressionTests.byte
-	ocamlbuild -use-ocamlfind -package qcheck expressionTests.cma
+	ocamlbuild -use-ocamlfind expressionTests.byte
+	ocamlbuild -use-ocamlfind expressionTests.cma
 	./expressionTests.byte
 
 clean:

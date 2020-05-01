@@ -32,6 +32,7 @@ let _ = match Unix.fork () with
                 let code = signal socket in
                 code = (Bytes.make 1 '\000')) in
         
+        (* QCheck_runner.set_seed 528671099; *)
         let result = QCheck_runner.run_tests ~verbose:true [
             compile_test
         ] in

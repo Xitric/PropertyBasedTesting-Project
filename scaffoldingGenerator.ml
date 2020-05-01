@@ -160,6 +160,9 @@ let string_of_dsl = function
     | Dsl content -> String.concat "" (List.map string_of_root_node content)
 
 (* Shrinker *)
+let make_scope = function
+    Variables(_, vars) -> List.map (fun v -> (v, Integer)) vars
+
 let (>>=) = Iter.(>>=)
 let non_empty_list_shrinker elem_shrinker = function
     | [] -> Iter.empty
@@ -168,23 +171,27 @@ let non_empty_list_shrinker elem_shrinker = function
         | [] -> Iter.return [List.hd list]
         | list' -> Iter.return list'
 
-let data_node_shrinker = function
+let data_node_shrinker scope = function
     | Out(channel, id, pipeline) ->
-        Iter.map (fun pipeline' -> Out(channel, id, pipeline')) (pipeline_shrinker pipeline)
+        Iter.map (fun pipeline' -> Out(channel, id, pipeline')) (pipeline_shrinker scope pipeline)
 
-let sensor_node_shrinker = function
+let sensor_node_shrinker scope = function
     | Data(id, outs) ->
-        Iter.map (fun outs' -> Data(id, outs')) (non_empty_list_shrinker data_node_shrinker outs)
+        Iter.map (fun outs' -> Data(id, outs')) (non_empty_list_shrinker (data_node_shrinker scope) outs)
 
 let board_node_shrinker = function
     | In _ -> Iter.empty
     | ExtSensor(id, pins, vars, sampler, datas) ->
-        Iter.map (fun datas' -> ExtSensor(id, pins, vars, sampler, datas')) (non_empty_list_shrinker sensor_node_shrinker datas)
+        Iter.map (fun datas' -> ExtSensor(id, pins, vars, sampler, datas')) (non_empty_list_shrinker (sensor_node_shrinker (make_scope vars)) datas)
+        (* TODO: Shrink pins and vars, if they are not used in the pipeline *)
+        (* Thus, we should skrink the pipelines first, as we do here *)
     | OnbSensor(id, vars, sampler, datas) ->
-        Iter.map (fun datas' -> OnbSensor(id, vars, sampler, datas')) (non_empty_list_shrinker sensor_node_shrinker datas)
+        Iter.map (fun datas' -> OnbSensor(id, vars, sampler, datas')) (non_empty_list_shrinker (sensor_node_shrinker (make_scope vars)) datas)
+        (* TODO: same as above *)
 
 let root_node_shrinker = function
     | Language l -> Iter.empty
+    (* TODO: If we shrink channel names, we also have to replace the names throughout the entire AST *)
     | Channel ch -> Iter.empty
     | Board(name, version, sensors) ->
         Iter.map (fun sensors' -> Board(name, version, sensors')) (non_empty_list_shrinker board_node_shrinker sensors)
@@ -192,3 +199,9 @@ let root_node_shrinker = function
 let dsl_shrinker = function
     | Dsl(content) ->
         Iter.map (fun content' -> Dsl(content')) (Shrink.list_elems root_node_shrinker content)
+
+(* TODO: *)
+(*
+type variables =
+    | Variables of string * string list
+*)

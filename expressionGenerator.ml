@@ -1,4 +1,5 @@
 open QCheck
+open Str
 
 (* Types *)
 type expression_type = 
@@ -18,11 +19,11 @@ type tree_node =
   | Literal of boxed_literal
   | Variable of string * expression_type * int
   | OperatorApplication of tree_node * expression_type * tree_node * expression_type
-  | ConditionalApplication of tree_node * tree_node * expression_type * tree_node * expression_type
+  | ConditionalApplication of tree_node * tree_node * tree_node * expression_type
 
 (* The integer represents operator precedence, and is taken from *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)
-let global_scope = [  
+let global_scope = [
   (* Addition *)
   ("+", Function(Float, Function(Float, Float)), 14);
   ("+", Function(Integer, Function(Integer, Integer)), 14);
@@ -102,7 +103,7 @@ let rec resolves_to = function
       | t -> t in
     resolves_to_function t
   | OperatorApplication(_, _, child, _) -> resolves_to child
-  | ConditionalApplication(_, _, t, _, _) -> t
+  | ConditionalApplication(_, _, _, t) -> t
 
 (* Determines if two types are compatible, such as using an Integer in place *)
 (* of a Float *)
@@ -113,6 +114,19 @@ let rec types_compatible expected proposed =
     | (Function(t_expected, r_expected), Function(t_proposed, r_proposed)) ->
       types_compatible t_expected t_proposed && types_compatible r_expected r_proposed
     | _ -> false
+
+let rec mutate_variable mutator = function
+  | Variable(id, typ, precedence) ->
+    mutator id typ precedence
+  | OperatorApplication(a, a_type, b, b_type) ->
+    let a' = mutate_variable mutator a in
+    OperatorApplication(a', a_type, b, b_type)
+  | ConditionalApplication(a, b, c, typ) ->
+    let a' = mutate_variable mutator a in
+    let b' = mutate_variable mutator b in
+    let c' = mutate_variable mutator c in
+    ConditionalApplication(a', b', c', typ)
+  | exp -> exp
 
 (* Generators *)
 open Gen
@@ -189,8 +203,9 @@ and conditional_gen goal_type scope fuel =
       | None -> return None
       | Some left_exp -> expression_gen goal_type scope (fuel / 2) >>= function
         | None -> return None
-        | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, goal_type, right_exp, goal_type)))]
+        | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, right_exp, goal_type)))]
 
+(* TODO: Properly discard failing instances of generators *)
 and expression_gen goal_type scope fuel =
   let generators = if fuel = 0 then
     List.concat [
@@ -240,7 +255,7 @@ let rec string_of_tree_node = function
     ^ " " ^ s ^ " " ^
     (if right_precedence <= op_prec then parenthesise (string_of_tree_node r) else string_of_tree_node r)
   | OperatorApplication(a, _, b, _) -> (string_of_tree_node a) ^ (string_of_tree_node b)
-  | ConditionalApplication(a, b, _, c, _) ->
+  | ConditionalApplication(a, b, c, _) ->
     (if get_precedence a <= 4 then
       parenthesise (string_of_tree_node a)
     else
@@ -256,12 +271,20 @@ let serialize_exp = function
 
 (* Shrinker *)
 let (<+>) = Iter.(<+>)
+let float_shrinker number = 
+  (* print_string ((string_of_float number) ^ "\n"); *)
+  let list_of_ints = List.map (fun l -> print_endline l; int_of_string l) (Str.split(Str.regexp "[.]") (string_of_float number)) in
+  (* let list_of_ints = List.map int_of_string (Str.split(Str.regexp "[.]") (string_of_float number)) in *)
+  let left_side = Shrink.int(List.hd list_of_ints) in
+  let right_side = Shrink.int(List.hd (List.tl list_of_ints)) in 
+  Iter.map2 (fun l r -> float_of_string ((string_of_int l) ^ "." ^ (string_of_int r))) left_side right_side
+
 let literal_shrinker = function
   | BoxedInteger old ->
     Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int old)
   | BoxedFloat old ->
     Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int (int_of_float old))
-    (* <+> Float shrinking *)
+    (* <+> Iter.map (fun v -> Literal (BoxedFloat v)) (float_shrinker old) *)
   | BoxedBoolean old ->
     if not old then
       Iter.return (Literal (BoxedBoolean true))
@@ -298,8 +321,9 @@ let rec tree_node_shrinker = function
         | Variable _ -> Iter.empty
         | _ -> (Iter.map (fun child' -> OperatorApplication(a, a_type, child', child_type)) (tree_node_shrinker child))
       )
-  | ConditionalApplication (a, b, b_type, c, c_type) ->
+  | ConditionalApplication (a, b, c, typ) ->
     Iter.of_list [b;c]
-    <+> Iter.map (fun a' -> ConditionalApplication(a', b, b_type, c, c_type)) (tree_node_shrinker a)
-    <+> Iter.map (fun b' -> ConditionalApplication(a, b', b_type, c, c_type)) (tree_node_shrinker b)
-    <+> Iter.map (fun c' -> ConditionalApplication(a, b, b_type, c', c_type)) (tree_node_shrinker c)
+    <+> (if (types_compatible typ Boolean) then Iter.return a else Iter.empty)
+    <+> Iter.map (fun a' -> ConditionalApplication(a', b, c, typ)) (tree_node_shrinker a)
+    <+> Iter.map (fun b' -> ConditionalApplication(a, b', c, typ)) (tree_node_shrinker b)
+    <+> Iter.map (fun c' -> ConditionalApplication(a, b, c', typ)) (tree_node_shrinker c)

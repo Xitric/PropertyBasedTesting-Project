@@ -1,0 +1,5 @@
+<main.*>: package(str), package(qcheck)
+<utils.*>: package(unix)
+<*Generator.*>: package(str), package(qcheck)
+<*Statistics.*>: package(qcheck)
+<*Tests.*>: package(str), package(qcheck)
