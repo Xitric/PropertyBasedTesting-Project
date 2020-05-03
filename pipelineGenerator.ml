@@ -61,14 +61,19 @@ and map_gen_internal goal_type expression_type variables fuel =
         return (Some(Map(expression,var,next)))
 
 (* Generator for window *)
-and window_gen goal_type variables fuel = 
-  if List.length variables > 1 then
-    return None
-  else 
-    (int_range 1 16) >>= fun number ->
-      execute_gen >>= fun expip ->
-        pipeline_gen_internal goal_type Integer variables (fuel/2) >>= fun next ->
-          return (Some(Window(number, expip, next)))
+and window_gen goal_type current_type variables fuel =
+  (* We can only perform window operations in number types *)
+  match current_type with
+    | Integer
+    | Float ->
+      if List.length variables > 1 then
+        return None
+      else
+        (int_range 1 16) >>= fun number ->
+          execute_gen >>= fun expip ->
+            pipeline_gen_internal goal_type Float variables (fuel/2) >>= fun next ->
+              return (Some(Window(number, expip, next)))
+    | _ -> return None
 
 and pipeline_gen_internal goal_type current_type variables fuel =
   if fuel = 0 then
@@ -81,19 +86,19 @@ and pipeline_gen_internal goal_type current_type variables fuel =
     frequency [
       (10, filter_gen goal_type current_type variables fuel);
       (10, map_gen goal_type variables fuel);
-      (1, window_gen goal_type variables fuel)
+      (1, window_gen goal_type current_type variables fuel)
     ]
 
 (* Pipeline generator *)
 and pipeline_gen goal_type variables fuel =
   if fuel = 0 then
-    (* TODO: Invoke generator with specific target type, similarly to above TODO *)
     return None
   else
     frequency [
+      (* Pipelines always start with integers as input *)
       (10, filter_gen goal_type Integer variables fuel);
       (10, map_gen goal_type variables fuel);
-      (1, window_gen goal_type variables fuel)
+      (1, window_gen goal_type Integer variables fuel)
     ]
  
 let string_of_execute = function
@@ -113,12 +118,6 @@ let rec string_of_pipeline_node = function
     | Window (width, execute, next) -> ".byWindow[" ^ (string_of_int width) ^ "]." ^ (string_of_execute execute) ^ (string_of_pipeline_node next)
 
 (* Shrinker *)
-let rec is_last_map = function
-  | Some(Filter(_, next))
-  | Some(Window(_, _, next)) -> is_last_map next
-  | Some(Map _) -> false
-  | None -> true
-
 let next = function
   | Some current -> (match current with
     | Filter(_, next)
@@ -126,98 +125,132 @@ let next = function
     | Window(_, _, next) -> next)
   | _ -> None
 
-let remove_next current =
-  let next = next (next (Some current)) in
-  match current with
-    | Filter(exp, _) -> Filter(exp, next)
-    | Map(exp, id, _) -> Map(exp, id, next)
-    | Window(width, exec, _) -> Window(width, exec, next)
+let is_last_map map =
+  let rec is_last = function
+    | Some(Filter(_, next))
+    | Some(Window(_, _, next)) -> is_last next
+    | Some(Map _) -> false
+    | None -> true in
+  is_last (next (Some map))
 
-let rec mutate_pipeline_variables mutator = function
-  | Filter(exp, Some next) ->
-    let exp' = mutator exp in
-    let next' = mutate_pipeline_variables mutator next in
-    Filter(exp', Some next')
-  | Map(exp, id, next) ->
-    let exp' = mutator exp in
-    Map(exp', id, next)
-  | Window(width, exec, Some next) ->
-    let next' = mutate_pipeline_variables mutator next in
-    Window(width, exec, Some next')
-  | pipeline -> pipeline
+let rec remove current to_remove =
+  if current = to_remove then
+    next (Some current)
+  else
+    match current with
+      | Filter(exp, Some next) -> Some (Filter(exp, remove next to_remove))
+      | Map(exp, id, Some next) -> Some (Map(exp, id, remove next to_remove))
+      | Window(width, exec, Some next) -> Some (Window(width, exec, remove next to_remove))
+      | _ -> None
 
-(* TODO: Ability to remove maps and windows depending on types in pipeline *)
-(* TODO: Rename variables in pipeline (until the next map) in case a map is removed *)
+let mutate_pipeline_variables mutator pipeline =
+  let rec mutate_inner mutator = function
+    | Filter(exp, Some next) ->
+      let exp' = mutator exp in
+      let next' = mutate_inner mutator next in
+      Filter(exp', Some next')
+    | Map(exp, id, next) ->
+      let exp' = mutator exp in
+      Map(exp', id, next)
+    | Window(width, exec, Some next) ->
+      let next' = mutate_inner mutator next in
+      Window(width, exec, Some next')
+    | pipeline -> pipeline in
+  match pipeline with
+    | Filter(exp, Some next) -> Filter(exp, Some (mutate_inner mutator next))
+    | Map(exp, id, Some next) -> Map(exp, id, Some (mutate_inner mutator next))
+    | Window(width, exec, Some next) -> Window(width, exec, Some (mutate_inner mutator next))
+    | _ -> pipeline
+
+(* TODO: Ability to remove windows depending on types in pipeline *)
 let (<+>) = Iter.(<+>)
-(* Scope: *)
-(*    [("a", Boolean), ("b", Integer)] *)
 let rec pipeline_shrinker scope current =
+  (* Shrinking recursively *)
+  (match current with
+    | Filter(exp, Some next) -> Iter.map (fun next' -> Filter(exp, Some next')) (pipeline_shrinker scope next)
+    | Map(exp, id, Some next) -> Iter.map (fun next' -> Map(exp, id, Some next')) (pipeline_shrinker [(id, resolves_to exp)] next)
+    | Window(width, exec, Some next) -> Iter.map (fun next' -> Window(width, exec, Some next')) (pipeline_shrinker scope next)
+    | _ -> Iter.empty)
+  <+>
+
+  (* Removing filters *)
+  (match current with
+    | Filter(_, Some next) -> Iter.return next
+    | Map(_, _, Some (Filter _ as filter))
+    | Window(_, _, Some (Filter _ as filter)) -> (match remove current filter with
+      | None -> Iter.empty
+      | Some filter_removed -> Iter.return filter_removed)
+    | _  -> Iter.empty)
+  <+>
+
+  (* Removing maps *)
   (match current with
     | Filter(_, Some (Map(exp, id, _) as map))
     | Map(_, _, Some (Map(exp, id, _) as map))
-    | Window(_, _, Some (Map(exp, id, _) as map)) ->
-      if is_last_map (next (Some map)) then (
-        (* Remove if it is the last MAP in the pipeline and does not change the output type *)
+    | Window(_, _, Some (Map(exp, id, _) as map))
+    | (Map(exp, id, _) as map) ->
+      if is_last_map map then
+        (* Can remove if it is the last map and it does not change the type *)
+        (* from the previous scope *)
         if List.length scope = 1 && types_compatible (snd (List.hd scope)) (resolves_to exp) then
-          Iter.return (remove_next current)
-        else
-          Iter.empty
-      ) else (
-        (* Remove if it is followed by another map. Two sub-cases: *)
-        (*    If the previous scope uses the same type of variable, we can rename variables down the pipeline *)
-        if types_compatible (snd (List.hd scope)) (resolves_to exp) then
-          (* x.map[c -> a].filter[a > 0].filter[a < 10].map[a + a -> b].filter[b < 18] *)
-          (* x            .filter[c > 0].filter[c < 10].map[c + c -> b].filter[b < 18] *)
-          let new_identifier = fst (List.hd scope) in
-          let variable_renamer old_id typ precedence =
-            if old_id = id then
-              Variable(new_identifier, typ, precedence)
-            else
-              Variable(old_id, typ, precedence)
-            in
-          Iter.return (mutate_pipeline_variables (mutate_variable variable_renamer) map)
+          (match remove current map with
+            | None -> Iter.empty
+            | Some map_removed -> Iter.return map_removed)
+        else Iter.empty
+      else
+        (* We can always remove a map if it is followed by another one *)
+        (match remove current map with
+          | None -> Iter.empty
+          | Some map_removed ->
+            (* If the previous scope uses the same type of variable, we can just *)
+            (* rename variables after removing the map *)
+            if types_compatible (snd (List.hd scope)) (resolves_to exp) then (
+              let new_identifier = fst (List.hd scope) in
+              let variable_renamer old_id typ precedence =
+                if old_id = id then
+                  Variable(new_identifier, typ, precedence)
+                else
+                  Variable(old_id, typ, precedence)
+                in
+              Iter.return (mutate_pipeline_variables (mutate_variable variable_renamer) map_removed)
 
-        (*    If the previous scope uses a different type of variable, we must replace the removed variable with literals down the pipeline *)
-        else
-          (* x.map[c ? 5 : 0 -> a].filter[a > 0].filter[a < 10].map[a + a -> b].filter[b < 18] *)
-          (* x                    .filter[1 > 0].filter[6 < 10].map[7 + 5 -> b].filter[b < 18] *)
-          let literal_replacer old_id typ precedence =
-            if old_id = id then
-              match make_lit typ with
-                | Some lit -> lit
-                | None -> Variable(old_id, typ, precedence)
-            else
-              Variable(old_id, typ, precedence)
-            in
-          Iter.return (mutate_pipeline_variables (mutate_variable literal_replacer) map)
-      )
-    | _ -> Iter.empty
-  )
-  (* 390736775 *)
-  (* out jkvqx du_EzXXc.map["" + (true ? 0 : -91449.8009972) -> BOTAen].byWindow[0].median.map[0 -> RBYyk_].map[0 -> TFaRFNFOYxgT] *)
-  (* out jkvqx du_EzXXc.                                                                   map[0 -> RBYyk_].map[0 + RBYyk_ -> TFaRFNFOYxgT] *) *)
-  
-  (* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)
-  (* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)
+            (* If the previous scope uses a different type of variable, we can *)
+            (* instead replace variables with literals *)
+            ) else (
+              let literal_replacer old_id typ precedence =
+                if old_id = id then
+                  match make_lit typ with
+                    | Some lit -> lit
+                    | None -> Variable(old_id, typ, precedence)
+                else
+                  Variable(old_id, typ, precedence)
+                in
+              Iter.return (mutate_pipeline_variables (mutate_variable literal_replacer) map_removed)
+            )
+        )
+    | _ -> Iter.empty)
+    <+>
+
+  (* Removing windows *)
+  (match current with
+    | Filter(_, Some (Window _ as window)) 
+    | Map(_, _, Some (Window _ as window)) -> (match remove current window with
+      | None -> Iter.empty
+      | Some window_removed -> Iter.return window_removed)
+    | Window(_, _, Some next) -> Iter.return next
+    | _  -> Iter.empty)
+  <+>
+
+  (* Shrinking expressions *)
+  (match current with
+    | Filter(exp, next) -> Iter.map (fun exp' -> Filter(exp', next)) (tree_node_shrinker exp)
+    | Map(exp, id, next) -> Iter.map (fun exp' -> Map(exp', id, next)) (tree_node_shrinker exp)
+    | Window(width, exec, next) -> Iter.map (fun width' -> Window(width', exec, next)) (Shrink.int width))
 
 
-  match current with
-  | Filter(exp, next) ->
-    (match next with
-      | None -> Iter.empty
-      | Some n ->
-        Iter.return n
-        <+> Iter.map (fun next' -> Filter(exp, Some next')) (pipeline_shrinker scope n))
-    <+> Iter.map (fun exp' -> Filter(exp', next)) (tree_node_shrinker exp)
-  | Map(exp, id, next) ->
-    (match next with
-      | None -> Iter.empty
-      | Some n ->
-        Iter.map (fun next' -> Map(exp, id, Some next')) (pipeline_shrinker [(id, resolves_to exp)] n))
-    <+> Iter.map (fun exp' -> Map(exp', id, next)) (tree_node_shrinker exp)
-  | Window(width, exec, next) ->
-    (match next with
-      | None -> Iter.empty
-      | Some n ->
-        Iter.map (fun next' -> Window(width, exec, Some next')) (pipeline_shrinker scope n))
-    <+> Iter.map (fun w -> Window(w, exec, next)) (Shrink.int width)
+(* 390736775 *)
+(* out jkvqx du_EzXXc.map["" + (true ? 0 : -91449.8009972) -> BOTAen].byWindow[0].median.map[0 -> RBYyk_].map[0 -> TFaRFNFOYxgT] *)
+(* out jkvqx du_EzXXc.                                                                   map[0 -> RBYyk_].map[0 + RBYyk_ -> TFaRFNFOYxgT] *)
+
+(* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)
+(* out SuDW_UD_S _ePHPJQp.map[0 -> TSbAMpTrE].filter[0 < TSbAMpTrE].map["" -> ZUfinT] *)

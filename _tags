@@ -1,3 +1,4 @@
+true: package(ppx_deriving.show)
 <main.*>: package(str), package(qcheck)
 <utils.*>: package(unix)
 <*Generator.*>: package(str), package(qcheck)

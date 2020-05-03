@@ -7,19 +7,19 @@ type expression_type =
   | Float
   | Boolean
   | String
-  | Function of expression_type * expression_type
+  | Function of expression_type * expression_type [@@deriving show { with_path = false }]
 
 type boxed_literal =
   | BoxedInteger of int
   | BoxedFloat of float
   | BoxedBoolean of bool
-  | BoxedString of string
+  | BoxedString of string [@@deriving show { with_path = false }]
 
 type tree_node =
   | Literal of boxed_literal
   | Variable of string * expression_type * int
   | OperatorApplication of tree_node * expression_type * tree_node * expression_type
-  | ConditionalApplication of tree_node * tree_node * tree_node * expression_type
+  | ConditionalApplication of tree_node * tree_node * tree_node * expression_type [@@deriving show { with_path = false }]
 
 (* The integer represents operator precedence, and is taken from *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#Table *)
