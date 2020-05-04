@@ -36,8 +36,10 @@ let execute_expression sock expression =
 
 let _ = match Unix.fork () with
     | 0 ->
-        ignore (Sys.command "rm test/groovy-out.txt");
-        Sys.command "groovy groovy-server.groovy > test/groovy-out.txt"
+        ignore (Sys.command "rm groovy_server/execution_server/groovy-out.txt");
+        ignore (Sys.command "cd groovy_server;ant compile");
+        Sys.command "cd groovy_server/execution_server;groovy GroovyServer.groovy > groovy-out.txt"
+        (* Sys.command "cd groovy_server/execution_server;ant run" *)
     | pid ->
         let socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         Unix.sleep 5;

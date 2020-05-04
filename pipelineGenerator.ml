@@ -162,7 +162,6 @@ let mutate_pipeline_variables mutator pipeline =
     | Window(width, exec, Some next) -> Window(width, exec, Some (mutate_inner mutator next))
     | _ -> pipeline
 
-(* TODO: Ability to remove windows depending on types in pipeline *)
 let (<+>) = Iter.(<+>)
 let rec pipeline_shrinker scope current =
   (* Shrinking recursively *)

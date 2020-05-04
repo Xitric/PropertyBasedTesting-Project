@@ -1,10 +1,21 @@
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import groovy.transform.TypeChecked
+
 def socketServer = new ServerSocket(5000)
 
 socketServer.accept { socket ->
     socket.withStreams { input, output ->
 
         def reader = input.newReader()
-        def shell = new GroovyShell()
+        def config = new CompilerConfiguration()
+        config.addCompilationCustomizers(
+            // Perform type-checking on Groovy code before executing
+            new ASTTransformationCustomizer(
+                TypeChecked,
+                extensions:[])
+        )
+        def shell = new GroovyShell(config)
         
         while(true) {
             def program = reader.readLine()

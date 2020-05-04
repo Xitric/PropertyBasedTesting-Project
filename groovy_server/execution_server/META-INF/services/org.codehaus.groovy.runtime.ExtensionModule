@@ -1,0 +1,3 @@
+moduleName=Language extensions for Groovy type checking
+moduleVersion=1.0.0
+extensionClasses=NumberExtensions
