@@ -8,18 +8,7 @@
         </classpath>
     </taskdef>
 
-    <!-- <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
-        <classpath>
-            <fileset file="${groovy.home}/lib/groovy-${groovy.version}.jar"/>
-            <fileset file="${groovy.home}/lib/groovy-ant.jar"/>
-        </classpath>
-    </taskdef> -->
-
     <target name="compile">
         <groovyc srcdir="language_extensions" destdir="execution_server"/>
     </target>
-
-    <!-- <target name="run">
-        <groovy src="execution_server/GroovyServer.groovy" output="execution_server/groovy-out.txt"/>
-    </target> -->
 </project>

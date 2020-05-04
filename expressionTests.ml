@@ -39,7 +39,6 @@ let _ = match Unix.fork () with
         ignore (Sys.command "rm groovy_server/execution_server/groovy-out.txt");
         ignore (Sys.command "cd groovy_server;ant compile");
         Sys.command "cd groovy_server/execution_server;groovy GroovyServer.groovy > groovy-out.txt"
-        (* Sys.command "cd groovy_server/execution_server;ant run" *)
     | pid ->
         let socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         Unix.sleep 5;
@@ -77,6 +76,7 @@ let _ = match Unix.fork () with
                 let expression = string_of_opt string_of_tree_node ast in
                 execute_expression socket expression) in
 
+        QCheck_runner.set_seed 324059272;
         (* QCheck_runner.set_seed 89125461; *)
         let result = QCheck_runner.run_tests ~verbose:true [
             int_exp_test;
