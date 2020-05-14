@@ -20,6 +20,10 @@ utils:
 	ocamlbuild -use-ocamlfind utils.byte
 	ocamlbuild -use-ocamlfind utils.cma
 
+traverseSyntaxTree:
+	ocamlbuild -use-ocamlfind traverseSyntaxTree.byte
+	ocamlbuild -use-ocamlfind traverseSyntaxTree.cma
+
 .PHONY: stat
 stat:
 	make all
