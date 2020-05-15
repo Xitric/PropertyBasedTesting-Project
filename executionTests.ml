@@ -1,6 +1,7 @@
 open QCheck
 open Utils
 open PipelineGenerator
+open PipelineModel
 open Printf
 
 let signal sock =
@@ -41,17 +42,32 @@ let make_input_file a b c =
         flush out_stream; true
     with e -> close_out_noerr out_stream; false
 
+let model_agrees pipeline sock a b c =
+    let expected = compute pipeline sock a b c in
+    true
+
 (* Test that legal code generates the same output as a model *)
 let pipeline_generator = make (pipeline_gen Integer [("a",Integer,21);("b",Integer,21);("c",Integer,21)] 6)
     ~print:string_of_pipeline_node
     ~shrink:(shrink_wrap (pipeline_shrinker [("a",Integer);("b",Integer);("c",Integer)]))
 
 let _ = match Unix.fork () with
-    | 0 -> Sys.command "cd test;java -jar iot-compiler.jar test.iot > out.txt"
+    | 0 ->
+        (match Unix.fork () with
+            | 0 ->
+                Sys.command "cd test;java -jar iot-compiler.jar test.iot > out.txt"
+            | pid ->
+                ignore (Sys.command "rm groovy_server/execution_server/groovy-out.txt");
+                ignore (Sys.command "cd groovy_server;ant compile");
+                Sys.command "cd groovy_server/execution_server;groovy GroovyServer.groovy > groovy-out.txt")
     | pid ->
-        let socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+        let generator_socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         Unix.sleep 5;
-        Unix.connect socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
+        Unix.connect generator_socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
+
+        let groovy_socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+        Unix.sleep 5;
+        Unix.connect groovy_socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 5000));
         
         ignore (Sys.command "mkdir -p test/src-gen/board");
         ignore (Sys.command "cp test_stubs/* test/src-gen/board");
@@ -61,31 +77,37 @@ let _ = match Unix.fork () with
             ~count:1
             ~name:"Generated Python software produces correct output"
             (pair
-                pipeline_generator
                 (triple
                     (list_of_size (Gen.return 1000) small_signed_int)
                     (list_of_size (Gen.return 1000) small_signed_int)
                     (list_of_size (Gen.return 1000) small_signed_int)
                 )
+                pipeline_generator
             )
-            (fun (ast, (a, b, c)) ->
+            (fun ((a, b, c), ast) ->
                 (* Add when DSL actually works, because right now it is very broken *)
-                (* let () = to_file wrap_pipeline ast "test/test.iot" in *)
-                let code = signal socket in
+                let () = to_file wrap_pipeline ast "test/test.iot" in
+                let generator_code = signal generator_socket in
                 
-                if code = (Bytes.make 1 '\000') then (
+                if generator_code = (Bytes.make 1 '\000') then (
                     ignore (Sys.command "cp test/src-gen/config.json test/src-gen/board/");
                     if make_input_file a b c then (
-                        ignore (Sys.command "rm test/src-gen/board/endpoint.csv");
-                        ignore (Sys.command "cd test/src-gen/board;python3 main.py");
-                        (* TODO: Verify output *)
-                        true
+                        ignore (Sys.command "rm -f test/src-gen/board/endpoint.csv");
+                        let python_code = Sys.command "cd test/src-gen/board;python3 main.py" in
+                        if python_code = 0 then
+                            match ast with
+                                | Some pipeline ->
+                                    model_agrees pipeline groovy_socket a b c
+                                | None ->
+                                    true
+                        else false
                     ) else false
                 ) else false) in
         
         let result = QCheck_runner.run_tests ~verbose:true [
             compile_test
         ] in
-        stop socket;
-        (* ignore (Sys.command "rm -r src-gen"); *)
+        stop generator_socket;
+        write_str groovy_socket "kill";
+        (* ignore (Sys.command "rm -r test/src-gen"); *)
         result

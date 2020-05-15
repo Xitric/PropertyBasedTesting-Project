@@ -2,6 +2,7 @@ all:
 	make expressionGenerator
 	make pipelineGenerator
 	make scaffoldingGenerator
+	make pipelineModel
 	make utils
 
 expressionGenerator:
@@ -15,6 +16,10 @@ pipelineGenerator:
 scaffoldingGenerator:
 	ocamlbuild -use-ocamlfind scaffoldingGenerator.byte
 	ocamlbuild -use-ocamlfind scaffoldingGenerator.cma
+
+pipelineModel:
+	ocamlbuild -use-ocamlfind pipelineModel.byte
+	ocamlbuild -use-ocamlfind pipelineModel.cma
 
 utils:
 	ocamlbuild -use-ocamlfind utils.byte

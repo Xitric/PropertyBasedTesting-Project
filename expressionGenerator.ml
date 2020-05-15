@@ -49,8 +49,9 @@ let global_scope = [
   ("/", Function(Integer, Function(Integer, Integer)), 15);
 
   (* Exponentiation always returns a float *)
-  ("**", Function(Float, Function(Float, Float)), 16);
-  ("**", Function(Integer, Function(Integer, Float)), 16);
+  (* F*** this s*** in particular *)
+  (* ("**", Function(Float, Function(Float, Float)), 16);
+  ("**", Function(Integer, Function(Integer, Float)), 16); *)
 
   (* Boolean operators *)
   ("&&", Function(Boolean, Function(Boolean, Boolean)), 6);

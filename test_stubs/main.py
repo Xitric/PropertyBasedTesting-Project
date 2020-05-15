@@ -29,7 +29,6 @@ class DriverStub():
             ]
 
     def sample(self):
-        print("Get a value")
         values = self.samples.pop(0)
         return self.Tuple(*values)
 
@@ -49,7 +48,12 @@ class ChannelStub:
 class DeviceStub(Esp32):
 
     def _input_loop(self, thread):
-        for _ in range(1000):
+        lines = 0
+        with open("adc.csv", "r") as adc:
+            for line in adc:
+                lines += 1
+            
+        for _ in range(lines):
             for sensor_name in self._sensors:
                 self._sensors[sensor_name].signal("signal")
 

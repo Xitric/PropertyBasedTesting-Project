@@ -72,20 +72,24 @@
 // println(2 ** 2147483648)
 
 
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import groovy.transform.TypeChecked
-import groovy.transform.CompileStatic
+// import org.codehaus.groovy.control.CompilerConfiguration
+// import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+// import groovy.transform.TypeChecked
+// import groovy.transform.CompileStatic
 
-def config = new CompilerConfiguration()
-config.addCompilationCustomizers(
-    new ASTTransformationCustomizer(
-        CompileStatic,
-        extensions:["NumberTypeCheckExtensions.groovy"])
-)
+// def config = new CompilerConfiguration()
+// config.addCompilationCustomizers(
+//     new ASTTransformationCustomizer(
+//         CompileStatic,
+//         extensions:["NumberTypeCheckExtensions.groovy"])
+// )
+// // def shell = new GroovyShell(config)
 // def shell = new GroovyShell(config)
-def shell = new GroovyShell(config)
-// shell.evaluate("-0 ** 5")
-shell.evaluate("(true ? 0 : 146.17245898) >= 0 ** 0 ? 0 : 0")
-// shell.evaluate("\"h\".myOwnFunction()")
-// shell.evaluate("hello()")
+// // shell.evaluate("-0 ** 5")
+// shell.evaluate("(true ? 0 : 146.17245898) >= 0 ** 0 ? 0 : 0")
+// // shell.evaluate("\"h\".myOwnFunction()")
+// // shell.evaluate("hello()")
+
+def shell = new GroovyShell()
+def res = shell.evaluate("def qJk = false;true")
+println(res)

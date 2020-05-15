@@ -53,8 +53,8 @@ socketServer.accept { socket ->
                 output << 1         // No failure, but also no value
             } else {
                 output << 0         // Success
-                // output << shellResult.result
-                // output << (char) 3  // End of transmission
+                output << shellResult.result
+                output << (char) 3  // End of transmission
             }
         }
 

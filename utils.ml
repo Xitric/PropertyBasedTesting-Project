@@ -33,7 +33,8 @@ let read_all sock max =
         let length = Unix.read sock buffer ofs (max - ofs) in
         let ofs = ofs + length in
         if Bytes.contains (Bytes.sub buffer 0 ofs) '\003' then
-            Bytes.sub buffer 0 ofs
+            (* One byte less to discard 0x3 *)
+            Bytes.sub buffer 0 (ofs - 1)
         else
             read_all_internal buffer ofs in
     read_all_internal buffer 0
