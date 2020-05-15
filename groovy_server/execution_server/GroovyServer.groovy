@@ -8,6 +8,9 @@ socketServer.accept { socket ->
     socket.withStreams { input, output ->
 
         def reader = input.newReader()
+        // Removed because the typecheck fails to compare number types
+        // Apparently, in Java you cannot compare a Long and a Double, but you
+        // can compare longs and doubles. Sadly, Groovy uses the object types.
         // def config = new CompilerConfiguration()
         // config.addCompilationCustomizers(
         //     // Perform type-checking on Groovy code before executing
