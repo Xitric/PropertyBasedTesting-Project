@@ -1,0 +1,2 @@
+class SMBus:
+    pass

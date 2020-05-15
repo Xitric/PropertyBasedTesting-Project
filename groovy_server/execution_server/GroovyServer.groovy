@@ -8,14 +8,15 @@ socketServer.accept { socket ->
     socket.withStreams { input, output ->
 
         def reader = input.newReader()
-        def config = new CompilerConfiguration()
-        config.addCompilationCustomizers(
-            // Perform type-checking on Groovy code before executing
-            new ASTTransformationCustomizer(
-                TypeChecked,
-                extensions:[])
-        )
-        def shell = new GroovyShell(config)
+        // def config = new CompilerConfiguration()
+        // config.addCompilationCustomizers(
+        //     // Perform type-checking on Groovy code before executing
+        //     new ASTTransformationCustomizer(
+        //         TypeChecked,
+        //         extensions:[])
+        // )
+        // def shell = new GroovyShell(config)
+        def shell = new GroovyShell()
         
         while(true) {
             def program = reader.readLine()
