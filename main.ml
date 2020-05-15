@@ -17,12 +17,12 @@ let stop sock =
 let ast_generator = make (root_gen environment 6) ~print:string_of_dsl ~shrink:dsl_shrinker
 
 let _ = match Unix.fork () with
-    | 0 -> Sys.command "java -jar iot-compiler.jar test/test.iot > test/out.txt"
+    | 0 -> Sys.command "cd test;java -jar iot-compiler.jar test.iot > out.txt"
     | pid ->
         let socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         Unix.sleep 5;
         Unix.connect socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
-        
+
         let compile_test = Test.make
             ~count:100
             ~name:"IoT generator accepts legal code"
@@ -36,5 +36,5 @@ let _ = match Unix.fork () with
             compile_test
         ] in
         stop socket;
-        ignore (Sys.command "rm -r src-gen");
+        ignore (Sys.command "rm -r test/src-gen");
         result

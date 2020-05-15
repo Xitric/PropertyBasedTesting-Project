@@ -34,7 +34,7 @@ let make_input_file a b c =
             write_lines stream (a_rest, b_rest, c_rest)
         | _ -> ()
     in
-    let out_stream = open_out "src-gen/board/adc.csv" in
+    let out_stream = open_out "test/src-gen/board/adc.csv" in
     try
         fprintf out_stream "a, b, c\n";
         write_lines out_stream (a, b, c);
@@ -47,14 +47,14 @@ let pipeline_generator = make (pipeline_gen Integer [("a",Integer,21);("b",Integ
     ~shrink:(shrink_wrap (pipeline_shrinker [("a",Integer);("b",Integer);("c",Integer)]))
 
 let _ = match Unix.fork () with
-    | 0 -> Sys.command "java -jar iot-compiler.jar test/test.iot > test/out.txt"
+    | 0 -> Sys.command "cd test;java -jar iot-compiler.jar test.iot > out.txt"
     | pid ->
         let socket = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         Unix.sleep 5;
         Unix.connect socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
         
-        ignore (Sys.command "mkdir -p src-gen/board");
-        ignore (Sys.command "cp test_stubs/* src-gen/board");
+        ignore (Sys.command "mkdir -p test/src-gen/board");
+        ignore (Sys.command "cp test_stubs/* test/src-gen/board");
 
         let compile_test = Test.make
             (* ~count:100 *)
@@ -74,10 +74,10 @@ let _ = match Unix.fork () with
                 let code = signal socket in
                 
                 if code = (Bytes.make 1 '\000') then (
-                    ignore (Sys.command "cp src-gen/config.json src-gen/board/");
+                    ignore (Sys.command "cp test/src-gen/config.json test/src-gen/board/");
                     if make_input_file a b c then (
-                        ignore (Sys.command "rm src-gen/board/endpoint.csv");
-                        ignore (Sys.command "cd src-gen/board;python3 main.py");
+                        ignore (Sys.command "rm test/src-gen/board/endpoint.csv");
+                        ignore (Sys.command "cd test/src-gen/board;python3 main.py");
                         (* TODO: Verify output *)
                         true
                     ) else false

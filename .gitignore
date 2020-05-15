@@ -4,6 +4,5 @@ _build
 *.class
 *-out.txt
 src-gen/
-iot-compiler.jar
 
 !test.iot
