@@ -31,6 +31,13 @@ stat:
 	ocamlbuild -use-ocamlfind expressionStatistics.cma
 	./expressionStatistics.byte
 
+.PHONY: tests
+expressionTests:
+	make all
+	ocamlbuild -use-ocamlfind expressionTests.byte
+	ocamlbuild -use-ocamlfind expressionTests.cma
+	./expressionTests.byte
+
 .PHONY: testMain
 testMain:
 	make all
@@ -38,12 +45,12 @@ testMain:
 	ocamlbuild -use-ocamlfind main.cma
 	./main.byte
 
-.PHONY: tests
-expressionTests:
+.PHONY: executionTests
+executionTests:
 	make all
-	ocamlbuild -use-ocamlfind expressionTests.byte
-	ocamlbuild -use-ocamlfind expressionTests.cma
-	./expressionTests.byte
+	ocamlbuild -use-ocamlfind executionTests.byte
+	ocamlbuild -use-ocamlfind executionTests.cma
+	./executionTests.byte
 
 clean:
 	ocamlbuild -clean

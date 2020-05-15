@@ -24,24 +24,17 @@ let _ = match Unix.fork () with
         Unix.connect socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
         
         let compile_test = Test.make
-            (* ~count:100 *)
-            ~count:1
+            ~count:100
             ~name:"IoT generator accepts legal code"
             ast_generator
             (fun ast ->
-                (* let () = to_file string_of_dsl ast "test/test.iot" in *)
+                let () = to_file string_of_dsl ast "test/test.iot" in
                 let code = signal socket in
                 code = (Bytes.make 1 '\000')) in
-        
-        (* QCheck_runner.set_seed 528671099; *)
-     
-        (* QCheck_runner.set_seed 364960045; *)
-        (* 390736775 *)
-        (* 187700661 *)
         
         let result = QCheck_runner.run_tests ~verbose:true [
             compile_test
         ] in
         stop socket;
-        (* ignore (Sys.command "rm -r src-gen"); *)
+        ignore (Sys.command "rm -r src-gen");
         result

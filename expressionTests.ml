@@ -2,10 +2,6 @@ open QCheck
 open Utils
 open ExpressionGenerator
 
-let shrink_wrap shrinker = function
-    | None -> Iter.empty
-    | Some v -> Iter.map (fun v' -> Some v') (shrinker v)
-
 let int_exp_gen = make (expression_gen Integer global_scope 20) ~print:(string_of_opt string_of_tree_node) ~shrink:(shrink_wrap tree_node_shrinker)
 let float_exp_gen = make (expression_gen Float global_scope 20) ~print:(string_of_opt string_of_tree_node) ~shrink:(shrink_wrap tree_node_shrinker)
 let bool_exp_gen = make (expression_gen Boolean global_scope 20) ~print:(string_of_opt string_of_tree_node) ~shrink:(shrink_wrap tree_node_shrinker)

@@ -1,6 +1,6 @@
 true: package(ppx_deriving.show)
 <main.*>: package(str), package(qcheck)
-<utils.*>: package(unix)
+<utils.*>: package(unix), package(qcheck)
 <*Generator.*>: package(str), package(qcheck)
 <*Statistics.*>: package(qcheck)
 <*Tests.*>: package(str), package(qcheck)

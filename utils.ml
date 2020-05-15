@@ -1,3 +1,10 @@
+open QCheck
+
+(* Some optional utils *)
+let shrink_wrap shrinker = function
+    | None -> Iter.empty
+    | Some v -> Iter.map (fun v' -> Some v') (shrinker v)
+
 (* Some useful serializers *)
 let string_of_opt serializer = function
     | None -> "None"
