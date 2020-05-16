@@ -2,53 +2,6 @@ open ExpressionGenerator
 open PipelineGenerator
 open Utils
 
-(* type 'a pipeline_model =
-    | FilterMapModel of pipeline_node * pipeline_node
-    | WindowModel of 'a list * pipeline_node * pipeline_node
-
-let original = function
-    | FilterMapModel(_, o)
-    | WindowModel(_, _, o) -> o
-
-let current = function
-    | FilterMapModel(c, _)
-    | WindowModel(_, c, _) -> c
-
-let buffer = function
-    | FilterMapModel _ -> raise Not_found
-    | WindowModel(b, _, _) -> b
-
-let wrap_model pipeline = match pipeline with
-    | Filter _
-    | Map _ -> FilterMapModel(pipeline, pipeline)
-    | Window _ -> WindowModel([], pipeline, pipeline)
-
-let compute_single model acc a b c =
-    (* (acc@[8]) *)
-    (* (model, acc) *)
-    let rec handle pipeline 
-    match model with
-        | FilterMapModel(current, original) ->
-            (model, acc)
-        | WindowModel(buffer, current, original) ->
-            (model, acc)
-
-let compute_buffer buffer operation =
-    5
-
-let compute pipeline a b c =
-    let rec compute_loop model acc = function
-        | (a::a_rest, b::b_rest, c::c_rest) ->
-            let (new_model, new_acc) = compute_single model acc a b c in
-            compute_loop new_model new_acc (a_rest, b_rest, c_rest)
-        | _ -> acc
-    in compute_loop (wrap_model pipeline) [] (a, b, c) *)
-
-(* type pipeline_node =
-  | Filter of tree_node * pipeline_node option
-  | Map of tree_node * string * pipeline_node option
-  | Window of int * execute_pipeline * pipeline_node option *)
-
 let success_code = '\048'
 let arithmetic_code = '\049'
 let failure_code = '\050'

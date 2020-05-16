@@ -43,8 +43,15 @@ let make_input_file a b c =
     with e -> close_out_noerr out_stream; false
 
 let model_agrees pipeline sock a b c =
-    let expected = compute pipeline sock a b c in
-    true
+    let expected_values = compute pipeline sock a b c in
+    let in_stream = open_in "test/src-gen/board/endpoint.csv" in
+    let rec check_recursive stream = function
+        | expected::rest ->
+            let actual = input_line stream in
+            print_endline (actual ^ " = " ^ expected);
+            actual = expected && check_recursive stream rest
+        | _ -> true
+    in check_recursive in_stream expected_values
 
 (* Test that legal code generates the same output as a model *)
 let pipeline_generator = make (pipeline_gen Integer [("a",Integer,21);("b",Integer,21);("c",Integer,21)] 6)
@@ -93,6 +100,7 @@ let _ = match Unix.fork () with
                     ignore (Sys.command "cp test/src-gen/config.json test/src-gen/board/");
                     if make_input_file a b c then (
                         ignore (Sys.command "rm -f test/src-gen/board/endpoint.csv");
+                        ignore (Sys.command "touch test/src-gen/board/endpoint.csv");
                         let python_code = Sys.command "cd test/src-gen/board;python3 main.py" in
                         if python_code = 0 then
                             match ast with
