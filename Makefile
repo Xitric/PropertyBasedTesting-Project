@@ -25,10 +25,6 @@ utils:
 	ocamlbuild -use-ocamlfind utils.byte
 	ocamlbuild -use-ocamlfind utils.cma
 
-traverseSyntaxTree:
-	ocamlbuild -use-ocamlfind traverseSyntaxTree.byte
-	ocamlbuild -use-ocamlfind traverseSyntaxTree.cma
-
 .PHONY: stat
 stat:
 	make all
@@ -36,19 +32,19 @@ stat:
 	ocamlbuild -use-ocamlfind expressionStatistics.cma
 	./expressionStatistics.byte
 
-.PHONY: tests
+.PHONY: expressionTests
 expressionTests:
 	make all
 	ocamlbuild -use-ocamlfind expressionTests.byte
 	ocamlbuild -use-ocamlfind expressionTests.cma
 	./expressionTests.byte
 
-.PHONY: testMain
-testMain:
+.PHONY: dslTests
+dslTests:
 	make all
-	ocamlbuild -use-ocamlfind main.byte
-	ocamlbuild -use-ocamlfind main.cma
-	./main.byte
+	ocamlbuild -use-ocamlfind dslTests.byte
+	ocamlbuild -use-ocamlfind dslTests.cma
+	./dslTests.byte
 
 .PHONY: executionTests
 executionTests:

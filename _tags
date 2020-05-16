@@ -1,7 +1,5 @@
 true: package(ppx_deriving.show), package(qcheck)
-<main.*>: package(str)
 <utils.*>: package(unix)
 <pipelineModel.*>: package(str)
 <*Generator.*>: package(str)
 <*Tests.*>: package(str)
-<traverseSyntaxTree.*>:package(str)

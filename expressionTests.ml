@@ -22,7 +22,7 @@ let execute_expression sock expression =
     let response = read sock 1 in
     match Bytes.get response 0 with
         | n when n = success_code ->
-            (* let _ = read_all sock 512 in *)
+            let _ = read_all sock 512 in
             true
         | n when n = arithmetic_code ->
             true
