@@ -1,7 +1,4 @@
 _build
 *.byte
 *.class
-*-out.txt
-src-gen/
-
-!test.iot
+*out.txt
