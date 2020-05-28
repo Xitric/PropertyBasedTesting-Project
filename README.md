@@ -29,3 +29,8 @@ The third test verifies that the output of the DSL code generator works as expec
 ```
 make executionTests
 ```
+
+## System under test
+Two versions of the system under test can be found in this repository. The file `test/iot-compiler.jar` is a mostly bug-free version of the DSL. The file `test/iot-compiler-bugs.jar` is the original version of the DSL with all the bugs described in the accompanying project report.
+
+All test will, by default, use the file `test/iot-compiler.jar`.
