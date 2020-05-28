@@ -1,6 +1,9 @@
 # Testing a Domain Specific Language for IoT Devices
 This repository contains a QuickCheck framework written in OCaml for testing a domain specific language (DSL).
 
+## Contributors
+Unfortunately, the contributor section does not truly reflect who has worked on this project. This is because most of the development was done over Visual Studio Live Share. Thus, the host becomes the primary contributor.
+
 ## Dependencies
 Running this repository requires an installation of OCaml, Java, and Groovy.
 
