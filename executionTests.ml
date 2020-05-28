@@ -91,7 +91,6 @@ let _ = match Unix.fork () with
                 pipeline_generator
             )
             (fun ((a, b, c), ast) ->
-                (* Add when DSL actually works, because right now it is very broken *)
                 let () = to_file wrap_pipeline ast "test/test.iot" in
                 let generator_code = signal generator_socket in
                 
@@ -116,5 +115,5 @@ let _ = match Unix.fork () with
         ] in
         stop generator_socket;
         write_str groovy_socket "kill";
-        (* ignore (Sys.command "rm -r test/src-gen"); *)
+        ignore (Sys.command "rm -r test/src-gen");
         result

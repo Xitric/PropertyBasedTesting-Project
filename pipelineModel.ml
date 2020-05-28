@@ -29,7 +29,6 @@ let compute_expression expression scope sock =
         | _ -> ""
     in
     let program = serialize_parameters scope ^ string_of_tree_node expression in
-    (* TODO: Run with Groovy *)
     match execute_expression sock program with
         | Some value -> value
         | None -> "Arithmetic error"

@@ -206,7 +206,6 @@ and conditional_gen goal_type scope fuel =
         | None -> return None
         | Some right_exp -> return (Some(ConditionalApplication(predicate, left_exp, right_exp, goal_type)))]
 
-(* TODO: Properly discard failing instances of generators *)
 and expression_gen goal_type scope fuel =
   let generators = if fuel = 0 then
     List.concat [
