@@ -64,8 +64,8 @@ let conditional_application_test = Test.make ~count:10000 ~name:"conditional app
 
 let _ = QCheck_runner.run_tests ~verbose:true
   [
-    (* literal_test; *)
+    literal_test;
     variable_test;
-    (* operator_application_test;
-    conditional_application_test; *)
+    operator_application_test;
+    conditional_application_test;
   ]
