@@ -272,20 +272,12 @@ let serialize_exp = function
 
 (* Shrinker *)
 let (<+>) = Iter.(<+>)
-let float_shrinker number = 
-  (* print_string ((string_of_float number) ^ "\n"); *)
-  let list_of_ints = List.map (fun l -> print_endline l; int_of_string l) (Str.split(Str.regexp "[.]") (string_of_float number)) in
-  (* let list_of_ints = List.map int_of_string (Str.split(Str.regexp "[.]") (string_of_float number)) in *)
-  let left_side = Shrink.int(List.hd list_of_ints) in
-  let right_side = Shrink.int(List.hd (List.tl list_of_ints)) in 
-  Iter.map2 (fun l r -> float_of_string ((string_of_int l) ^ "." ^ (string_of_int r))) left_side right_side
 
 let literal_shrinker = function
   | BoxedInteger old ->
     Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int old)
   | BoxedFloat old ->
     Iter.map (fun v -> Literal (BoxedInteger v)) (Shrink.int (int_of_float old))
-    (* <+> Iter.map (fun v -> Literal (BoxedFloat v)) (float_shrinker old) *)
   | BoxedBoolean old ->
     if not old then
       Iter.return (Literal (BoxedBoolean true))

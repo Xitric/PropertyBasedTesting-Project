@@ -24,7 +24,7 @@ let _ = match Unix.fork () with
         Unix.connect socket (Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 4000));
 
         let compile_test = Test.make
-            ~count:100
+            ~count:1000
             ~name:"IoT generator accepts legal code"
             ast_generator
             (fun ast ->

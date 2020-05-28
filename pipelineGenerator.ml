@@ -83,23 +83,35 @@ and pipeline_gen_internal goal_type current_type variables fuel =
     else
       return None
   else
-    frequency [
+    let rules = [
       (10, filter_gen goal_type current_type variables fuel);
       (10, map_gen goal_type variables fuel);
       (1, window_gen goal_type current_type variables fuel)
-    ]
+    ] in
+    let rec each = function
+      | [] -> return None
+      | rule::rest -> rule >>= fun result -> match result with
+        | None -> each rest
+        | _ -> return result in
+    shuffle_w_l rules >>= each
 
 (* Pipeline generator *)
 and pipeline_gen goal_type variables fuel =
   if fuel = 0 then
     return None
   else
-    frequency [
+    let rules = [
       (* Pipelines always start with integers as input *)
       (10, filter_gen goal_type Integer variables fuel);
       (10, map_gen goal_type variables fuel);
       (1, window_gen goal_type Integer variables fuel)
-    ]
+    ] in
+    let rec each = function
+      | [] -> return None
+      | rule::rest -> rule >>= fun result -> match result with
+        | None -> each rest
+        | _ -> return result in
+    shuffle_w_l rules >>= each
  
 let string_of_execute = function
   | Mean -> "mean"
@@ -157,8 +169,8 @@ let mutate_pipeline_variables mutator pipeline =
       Window(width, exec, Some next')
     | pipeline -> pipeline in
   match pipeline with
-    | Filter(exp, Some next) -> Filter(exp, Some (mutate_inner mutator next))
-    | Map(exp, id, Some next) -> Map(exp, id, Some (mutate_inner mutator next))
+    | Filter(exp, Some next) -> Filter(mutator exp, Some (mutate_inner mutator next))
+    | Map(exp, id, Some next) -> Map(mutator exp, id, Some (mutate_inner mutator next))
     | Window(width, exec, Some next) -> Window(width, exec, Some (mutate_inner mutator next))
     | _ -> pipeline
 

@@ -85,7 +85,6 @@ let sensor_gen environment =
                         let new_environment = add_vars vars environment in
                         data_gen new_environment >>= fun datas ->
                             return (ExtSensor(name, pins, vars, sampler, [datas])) in
-    (* let onb_sensor_gen environment = ? in *)
     
     sample_gen >>= fun sampler ->
         oneof [
