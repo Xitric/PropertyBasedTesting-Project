@@ -19,9 +19,9 @@ let wrap_pipeline pipeline_ast =
     Printf.sprintf
     {|language python
 channel endpoint
-channel serial
+channel inserial
 board esp32 version wrover
-    in serial
+    in inserial
     sensor thermistor (12,13,14) as x(a,b,c)
         sample signal
         data result
@@ -80,8 +80,7 @@ let _ = match Unix.fork () with
         ignore (Sys.command "cp test_stubs/* test/src-gen/board");
 
         let compile_test = Test.make
-            (* ~count:100 *)
-            ~count:1
+            ~count:10
             ~name:"Generated Python software produces correct output"
             (pair
                 (triple

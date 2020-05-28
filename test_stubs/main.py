@@ -41,6 +41,7 @@ class ChannelStub:
         with open(self.file_name, "a") as file:
             lst = list(data)
             file.write("{}\n".format(", ".join(map(str, lst))))
+            file.flush()
     
     def receive(self) -> bytes:
         return None
